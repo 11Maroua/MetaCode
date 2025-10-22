@@ -243,24 +243,6 @@ function mettre_a_jour_etat!(etat, A, j_add, j_remove, j_add2, j_remove2)
 end
 
 
-
-function construction_gloutonne_randomisee(C, A, α)
-    # 1. Calcul des utilités pour chaque colonne
-    utilities = [u(j) for j in C_candidate]  
-    
-    # 2. Construction de la RCL 
-    u_min = minimum(utilities)
-    u_max = maximum(utilities)
-    u_limit = u_min + α * (u_max - u_min) 
-    RCL = [candidats avec utilité ≥ u_limit]
-   
-    j_selected = rand(RCL)
-    
-    return nouvelle_solution
-end
-
-
-
 function tester_recherche_locale()
     println("--------------TEST ÉTAPE 2 - RECHERCHE LOCALE----------")
     
