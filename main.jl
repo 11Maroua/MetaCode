@@ -13,7 +13,7 @@ include("getfname.jl")
 
 # Loading a SPP instance
 println("\nLoading...")
-fname = "Data/pb_200rnd0100.dat"
+fname = "Data/pb_500rnd0100.dat"
 C, A = loadSPP(fname)
 @show C
 @show A

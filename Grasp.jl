@@ -1,7 +1,10 @@
 using LinearAlgebra
+using Statistics
+
 include("loadSPP.jl")
 include("Glouton.jl")  
 include("ExplorationLocale.jl")   
+
 
 
 function construction_grasp(C, A, α)
@@ -12,20 +15,16 @@ function construction_grasp(C, A, α)
     candidats = Set(1:n)
     
     while !isempty(contraintes_non_couvertes) && !isempty(candidats)
-        # RÉUTILISATION: même calcul d'utilité que la version gloutonne
         utilites = calcul_utilites_candidats(candidats, contraintes_non_couvertes, C, A)
         
         if isempty(utilites)
             break
         end
         
-        # MODIFICATION GRASP: au lieu de prendre le meilleur, on construit une RCL
         rcl = construire_rcl(utilites, α)
         
-        # MODIFICATION GRASP: sélection aléatoire au lieu de gloutonne
         j_choisi = rand(rcl)
         
-        # RÉUTILISATION: même logique de mise à jour qu'en glouton
         x[j_choisi] = 1
         delete!(candidats, j_choisi)
         
@@ -49,9 +48,6 @@ function construction_grasp(C, A, α)
     return x
 end
 
-
-#Calcul des utilités pour les candidats
-
 function calcul_utilites_candidats(candidats, contraintes_non_couvertes, C, A)
     utilites = Dict{Int, Float64}()
     
@@ -65,9 +61,6 @@ function calcul_utilites_candidats(candidats, contraintes_non_couvertes, C, A)
     
     return utilites
 end
-
-
-#construction de la RCL selon utilité limite définie
 
 function construire_rcl(utilites, α)
     if isempty(utilites)
@@ -83,7 +76,6 @@ function construire_rcl(utilites, α)
     return rcl
 end
 
-
 function est_en_conflit_avec(j1, j2, A)
     m = size(A, 1)
     for i in 1:m
@@ -94,13 +86,10 @@ function est_en_conflit_avec(j1, j2, A)
     return false
 end
 
-
 function grasp(C, A, α, n_iterations; verbose=true)
     if verbose
-       
         println("---------------DÉMARRAGE GRASP---------------")
         println("  Paramètres: α = $α, n_iterations = $n_iterations")
-      
     end
     
     x_best = nothing
@@ -115,7 +104,7 @@ function grasp(C, A, α, n_iterations; verbose=true)
         z_init = dot(C, x_init)
         push!(historique_z_init, z_init)
         
-        # PHASE 2: RÉUTILISATION de la recherche locale existante !
+        # PHASE 2: Recherche locale
         x_ameliore, z_ameliore = recherche_locale(x_init, C, A)
         push!(historique_z_ls, z_ameliore)
         
@@ -137,20 +126,43 @@ function grasp(C, A, α, n_iterations; verbose=true)
         println("  Meilleure solution: z = $z_best")
         println("  Moyenne z_init: ", round(mean(historique_z_init), digits=2))
         println("  Moyenne z_LS: ", round(mean(historique_z_ls), digits=2))
-        
     end
     
     return x_best, z_best, historique_z_init, historique_z_ls
 end
 
 
-# ========== MAIN ==========
 
 function main()
-    
-    
+    try
+       
+        C, A = loadSPP("Data/pb_500rnd0100.dat")  
+        
+        println("Taille de C: $(length(C))")
+        println("Taille de A: $(size(A))")
+        
+        # Paramètres GRASP
+        α = 0.3
+        n_iterations = 100
+        
+        println("Exécution de GRASP avec α=$α et $n_iterations itérations")
+        
+        # Exécuter GRASP
+        x_best, z_best, hist_init, hist_ls = grasp(C, A, α, n_iterations)
+        
+        println("\n=== RÉSULTATS FINAUX ===")
+        println("Meilleure valeur objective: $z_best")
+        println("Nombre de variables sélectionnées: $(sum(x_best))")
+        
+        return x_best, z_best
+        
+    catch e
+        println("Erreur lors du chargement des données: $e")
+       
+    end
 end
 
+# Exécution
 @time begin
     main()
 end

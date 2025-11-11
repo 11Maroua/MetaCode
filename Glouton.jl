@@ -1,67 +1,77 @@
 using LinearAlgebra
 
-# ---- Exercice1 ------
+# ---- Construction Gloutonne pour SPP ----
 
-function construction_gloutonne(C, A)
+function construction_gloutonne_SPP(C, A)
     m, n = size(A)
     x = zeros(Int, n)        
-    A_restant = copy(A)
     variables_restantes = collect(1:n)
 
-    println("Début construction gloutonne:")
+    println("=== DEBUT CONSTRUCTION GLOUTONNE ===")
     println("m = ", m, " contraintes, n = ", n, " variables")
     println()
     
-    iteration = 1
     while !isempty(variables_restantes)
-        utilites = Float64[]
-        candidates = Int[]
+        meilleure_utilite = -Inf
+        meilleur_j = -1
         
+        # Évaluer toutes les variables restantes
         for j in variables_restantes
-            if peut_ajouter(x, A, j)
-                nb_contraintes = sum(A_restant[:, j])
-                utilite = (nb_contraintes > 0) ? C[j] / nb_contraintes : 0.0
-                push!(utilites, utilite)
-                push!(candidates, j)
+            if peut_ajouter_SPP(x, A, j)
+                nb_contraintes = sum(A[:, j])
+                #calcul des utilités des variables pour pouvoir choisir la meilleure d'abord
+                if nb_contraintes > 0
+                    utilite = C[j] / nb_contraintes
+                else
+                    utilite = C[j]  # Cas particulier: Variable sans contraintes !
+                end
+                
+                if utilite > meilleure_utilite
+                    meilleure_utilite = utilite
+                    meilleur_j = j
+                end
             end
         end
         
-        if isempty(candidates)
-            break
+        if meilleur_j == -1
+            break  # Plus aucune variable candidate
         end
         
-        idx_meilleur = argmax(utilites)
-        j_best = candidates[idx_meilleur]
-        x[j_best] = 1
+        # Ajouter la meilleure variable
+        x[meilleur_j] = 1
         
-        
-        
-        contraintes_supprimees = findall(A_restant[:, j_best] .== 1)
-        if !isempty(contraintes_supprimees)
-            A_restant = A_restant[setdiff(1:size(A_restant,1), contraintes_supprimees), :]
-        end
-        
-        idx_supprimer = findfirst(==(j_best), variables_restantes)
+        # Supprimer la variable sélectionnée de notre ensemble de candidats
+        idx_supprimer = findfirst(==(meilleur_j), variables_restantes)
         deleteat!(variables_restantes, idx_supprimer)
         
-       
-        iteration += 1
     end
     
-    println("=== CONSTRUCTION TERMINÉE ===")
+    # RÉSULTAT FINAL
+    valeur_totale = dot(C, x)
+    nb_variables = sum(x)
+    
+    println("\n=== SOLUTION FINALE ===")
     println("Solution: ", x)
-    println("Valeur: ", dot(C, x))
+    println("Variables sélectionnées: ", findall(x->x==1, x))
+    println("Nombre de variables: ", nb_variables)
+    println("Valeur totale Z = : ", valeur_totale)
     
     return x
 end
 
-function peut_ajouter(x, A, j_new)
+function peut_ajouter_SPP(x, A, j_new)
+    """
+    Vérifie si la variable j_new peut être ajoutée sans violer 
+    les contraintes de packing (au plus 1 variable par contrainte)
+    """
     m, n = size(A)
+    
     for i in 1:m
         if A[i, j_new] == 1
+            # Vérifier si une variable déjà sélectionnée couvre cette contrainte
             for k in 1:n
                 if x[k] == 1 && A[i, k] == 1
-                    return false
+                    return false  # Conflit détecté
                 end
             end
         end
@@ -69,26 +79,47 @@ function peut_ajouter(x, A, j_new)
     return true
 end
 
-# -------TEST SUR didactic.dat------
+# ---- Interface pour le livrable ----
 
 include("loadSPP.jl")
 
-function tester_didactic()
-    println("-----------TEST ÉTAPE 1 - CONSTRUCTION GLoutONNE--------")
-    fname = "Data/pb_200rnd0100.dat"
+function resoudreSPP(fname)
+    """
+    Fonction principale pour résoudre une instance SPP
+    """
+    println("Chargement de l'instance: ", fname)
     C, A = loadSPP(fname)
     
-    println("Instance: ", fname)
-    println("Coûts C = ", C)
-    println("Dimensions: ", size(A, 1), " contraintes × ", size(A, 2), " variables")
-    println()
+    println("Résolution du Set Packing Problem...")
+    solution = construction_gloutonne_SPP(C, A)
     
-    x_glouton = construction_gloutonne(C, A)
-    
-    println()
-    println("Solution construite avec succès!")
+    return solution
 end
 
-@time begin
-tester_didactic()
-end 
+function experimentationSPP()
+    """
+    Fonction pour mener une expérimentation sur 10 instances
+    """
+    instances = [
+        "Data/didactic.dat",
+        "Data/pb_100rnd0100.dat",
+        # Ajoutez vos autres instances ici
+    ]
+    
+    println("Début de l'expérimentation sur ", length(instances), " instances")
+    
+    for instance in instances
+        println("\n" * "="^50)
+        println(">>> Traitement de: ", instance)
+        resoudreSPP(instance)
+    end
+    
+    println("\nExpérimentation terminée!")
+end
+
+# ---- Exécution ----
+
+if abspath(PROGRAM_FILE) == @__FILE__
+    println("Test de l'algorithme SPP...")
+    resoudreSPP("Data/pb_100rnd0100.dat")
+end
