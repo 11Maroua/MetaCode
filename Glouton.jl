@@ -2,7 +2,7 @@ using LinearAlgebra
 
 # ---- Construction Gloutonne pour SPP ----
 
-function construction_gloutonne_SPP(C, A)
+function construction_gloutonne(C, A)
     m, n = size(A)
     x = zeros(Int, n)        
     variables_restantes = collect(1:n)
@@ -17,7 +17,7 @@ function construction_gloutonne_SPP(C, A)
         
         # Évaluer toutes les variables restantes
         for j in variables_restantes
-            if peut_ajouter_SPP(x, A, j)
+            if peut_ajouter(x, A, j)
                 nb_contraintes = sum(A[:, j])
                 #calcul des utilités des variables pour pouvoir choisir la meilleure d'abord
                 if nb_contraintes > 0
@@ -59,7 +59,7 @@ function construction_gloutonne_SPP(C, A)
     return x
 end
 
-function peut_ajouter_SPP(x, A, j_new)
+function peut_ajouter(x, A, j_new)
     """
     Vérifie si la variable j_new peut être ajoutée sans violer 
     les contraintes de packing (au plus 1 variable par contrainte)
@@ -91,7 +91,7 @@ function resoudreSPP(fname)
     C, A = loadSPP(fname)
     
     println("Résolution du Set Packing Problem...")
-    solution = construction_gloutonne_SPP(C, A)
+    solution = construction_gloutonne(C, A)
     
     return solution
 end
@@ -102,7 +102,7 @@ function experimentationSPP()
     """
     instances = [
         "Data/didactic.dat",
-        "Data/pb_100rnd0100.dat",
+        "Data/pb_200rnd0100.dat",
         # Ajoutez vos autres instances ici
     ]
     
@@ -121,5 +121,5 @@ end
 
 if abspath(PROGRAM_FILE) == @__FILE__
     println("Test de l'algorithme SPP...")
-    resoudreSPP("Data/pb_100rnd0100.dat")
+    resoudreSPP("Data/pb_200rnd0100.dat")
 end
