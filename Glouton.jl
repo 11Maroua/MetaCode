@@ -60,10 +60,7 @@ function construction_gloutonne(C, A)
 end
 
 function peut_ajouter(x, A, j_new)
-    """
-    Vérifie si la variable j_new peut être ajoutée sans violer 
-    les contraintes de packing (au plus 1 variable par contrainte)
-    """
+   
     m, n = size(A)
     
     for i in 1:m

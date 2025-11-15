@@ -133,8 +133,6 @@ function generer_voisinage_3_1(x, C, A)
     return meilleur_voisin, gain, amelioration, compteur
 end
 
-# ==================== PERTURBATION SIMPLE ====================
-
 function perturber_solution(x, C, A)
     x_perturbe = copy(x)
     vars_in = findall(x .== 1)
@@ -176,7 +174,7 @@ function descente_multi_start(x_initial, C, A; max_restarts=5)
         # Partir de la meilleure solution actuelle
         x = copy(x_best)
         
-        # Si ce n'est pas le premier restart, perturber
+        # Si ce n'est pas le premier restart on perturbe
         if restart > 1
             println("Perturbation de la solution...")
             x = perturber_solution(x, C, A)
@@ -204,6 +202,7 @@ function descente_multi_start(x_initial, C, A; max_restarts=5)
                 x_nouveau, gain, amelioration, nb_voisins = generer_voisinage_3_1(x, C, A)
             end
             
+            #sinon, optimum local atteint
             if !amelioration || gain <= 0
                 println("  Itération ", iteration, ": Optimum local atteint")
                 break
@@ -222,32 +221,29 @@ function descente_multi_start(x_initial, C, A; max_restarts=5)
             improvement = z_current - z_best
             x_best = copy(x)
             z_best = z_current
-            println("\n✓ NOUVELLE MEILLEURE SOLUTION: Z = ", z_best, " (+", 
+            println("\n NOUVELLE MEILLEURE SOLUTION: Z = ", z_best, " (+", 
                     round(improvement, digits=2), ")")
         else
             println("\nPas d'amélioration sur ce restart")
         end
     end
     
-    println("\n" * "="^70)
-    println("=== SOLUTION FINALE ===")
+    
+    println("================ SOLUTION FINALE =============")
     println("Z initiale: ", dot(C, x_initial))
     println("Z finale:   ", z_best, " (+", round(z_best - dot(C, x_initial), digits=2), ")")
     println("Variables:  ", sum(x_best))
-    println("Redémarrages: ", max_restarts)
-    println("="^70)
+   
     
     return x_best
 end
 
-# ==================== INTERFACE ====================
 
 function resoudreSPP(fname; methode="multi-start")
    
     println("RÉSOLUTION: ", fname)
     println("Méthode: ", methode)
-    println("="^70)
-    
+     
     C, A = loadSPP(fname)
     println("Dimensions: ", size(A, 1), " contraintes × ", size(A, 2), " variables\n")
     
