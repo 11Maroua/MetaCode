@@ -1,4 +1,6 @@
 using LinearAlgebra
+using Statistics
+
 include("loadSPP.jl")
 include("Glouton.jl")
 include("Exploration.jl")
@@ -358,10 +360,10 @@ end
 if abspath(PROGRAM_FILE) == @__FILE__
    
     # GRASP standard
-    #@time resoudreSPP_GRASP("Data/pb_100rnd0100.dat", methode="grasp", n_iter=50)
+    @time resoudreSPP_GRASP("Data/pb_100rnd0100.dat", methode="grasp", n_iter=50)
     
     #REACTIVE Grasp
-    @time resoudreSPP_GRASP("Data/pb_100rnd0100.dat", methode="reactive-grasp", n_iter=100)
+    #@time resoudreSPP_GRASP("Data/pb_200rnd0100.dat", methode="reactive-grasp", n_iter=100)
     
     # Comparaison
     # comparer_methodes("Data/pb_100rnd0100.dat", n_iter=100)
