@@ -159,7 +159,6 @@ end
 
 function descente_multi_start(x_initial, C, A; max_restarts=5)
     
-    println("\n" * "="^70)
     println("=== DESCENTE MULTI-START (", max_restarts, " redémarrages) ===")
     println("="^70)
     
@@ -239,53 +238,3 @@ function descente_multi_start(x_initial, C, A; max_restarts=5)
 end
 
 
-function resoudreSPP(fname; methode="multi-start")
-   
-    println("RÉSOLUTION: ", fname)
-    println("Méthode: ", methode)
-     
-    C, A = loadSPP(fname)
-    println("Dimensions: ", size(A, 1), " contraintes × ", size(A, 2), " variables\n")
-    
-    # Construction gloutonne
-    x_init = construction_gloutonne(C, A)
-    
-    # Amélioration selon la méthode choisie
-    if methode == "multi-start"
-        x_final = descente_multi_start(x_init, C, A, max_restarts=5)
-    else
-        error("Méthode inconnue: ", methode)
-    end
-    
-    return x_final
-end
-
-function tester_recherche_locale()
-    println("\n" * "="^70)
-    println("TEST RECHERCHE LOCALE SPP")
-    println("="^70)
-    
-    fname = "Data/pb_100rnd0100.dat"
-    C, A = loadSPP(fname)
-    # Construction gloutonne
-    x_init = construction_gloutonne(C, A)
-
-    z_init = dot(C, x_init)
-    println("\nSolution initiale: Z = ", z_init, " (", sum(x_init), " variables)")
-    
-    # Test avec multi-start
-    println("\n>>> Test: MULTI-START")
-    x_final = descente_multi_start(x_init, C, A, max_restarts=5)
-    
-    println("\n✓ Tests terminés!")
-end
-
-# ==================== EXÉCUTION ====================
-
-if abspath(PROGRAM_FILE) == @__FILE__
-    # Lancer le test
-    @time tester_recherche_locale()
-    
-    # Ou tester différentes méthodes:
-    # resoudreSPP("Data/pb_500rnd0100.dat", methode="multi-start")
-end
