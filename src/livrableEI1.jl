@@ -211,7 +211,6 @@ function sauvegarder_resultats(resultats)
     
     open(fichier, "w") do f
         write(f, "RÉSULTATS EXPÉRIMENTATION SPP\n")
-        write(f, "Date: $(now())\n")
         
         for r in resultats
             write(f, "Instance: $(r.instance)\n")
@@ -231,7 +230,7 @@ function sauvegarder_resultats(resultats)
             write(f, "\n")
         end
     end
-    println("\n Résultats sauvegardés dans: $fichier")
+    #println("\n Résultats sauvegardés dans: $fichier")
 end
 
 # Message d'accueil
