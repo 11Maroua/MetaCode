@@ -7,7 +7,7 @@ using JuMP, GLPK
 include("loadSPP.jl")
 include("setSPP.jl")
 include("Glouton.jl")        # Heuristique gloutonne
-include("Exploration.jl")    # Heuristique exploration locale
+include("Exploration.jl")    # Heuristique exploration locale (version optimisée)
 
 
 function resoudreSPP(fname::String)
@@ -25,9 +25,9 @@ function resoudreSPP(fname::String)
     println("Solution initiale: Z = $z_construct ($(sum(x_construct)) variables)")
     println("Temps: $(round(t_construct, digits=4))s")
     
-    # Phase 2: Recherche locale multi-start
+    # Phase 2: Recherche locale (utilise la fonction optimisée)
     println("\n--- PHASE 2: Recherche locale ---")
-    t_local = @elapsed x_final = descente_multi_start(x_construct, C, A, max_restarts=5)
+    t_local = @elapsed x_final = descente_profonde(x_construct, C, A, max_iter=1000, verbose=true)
     z_final = dot(C, x_final)
     println("\nSolution finale: Z = $z_final ($(sum(x_final)) variables)")
     println("Amélioration: +$(round(z_final - z_construct, digits=2))")
@@ -128,9 +128,9 @@ function experimentationSPP()
             println("Z_construct = $z_construct | Gap = N/A (pas de solution optimale)")
         end
         
-        # ===== RECHERCHE LOCALE =====
-        println("\n>>> Recherche locale multi-start...")
-        t_local = @elapsed x_local = descente_profonde(x_construct, C, A, max_restarts=5, verbose=false)
+        # ===== RECHERCHE LOCALE (utilise la fonction optimisée) =====
+        println("\n>>> Recherche locale...")
+        t_local = @elapsed x_local = descente_profonde(x_construct, C, A, max_iter=1000, verbose=false)
         z_local = dot(C, x_local)
         t_total = t_construct + t_local
         
@@ -230,7 +230,6 @@ function sauvegarder_resultats(resultats)
             write(f, "\n")
         end
     end
-    #println("\n Résultats sauvegardés dans: $fichier")
 end
 
 # Message d'accueil
