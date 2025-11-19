@@ -86,7 +86,7 @@ function experimentationSPP()
     resultats = []
     
     for (idx, inst) in enumerate(instances)
-        println("======== [$idx/$(length(instances))] Instance: $inst")
+        println("\n======== [$idx/$(length(instances))] Instance: $inst")
         
         # Chargement
         C, A = loadSPP(inst)
@@ -97,6 +97,7 @@ function experimentationSPP()
         t_opt = missing
         
         if n <= 100
+            println("\n")
             println("\n>>> Résolution exacte (GLPK)...")
             try
                 res_exact = resoudreSPP_exact(inst)
