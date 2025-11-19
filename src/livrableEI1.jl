@@ -80,7 +80,7 @@ function experimentationSPP()
         "dat/pb_100rnd0300.dat",
         "dat/pb_200rnd0300.dat",
         "dat/pb_500rnd0300.dat",
-        "dat/pb_2000rnd0800.dat"
+        "dat/pb_500rnd1500.dat"
     ]
     
     resultats = []
