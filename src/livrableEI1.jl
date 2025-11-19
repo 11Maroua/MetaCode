@@ -130,7 +130,7 @@ function experimentationSPP()
         
         # ===== RECHERCHE LOCALE =====
         println("\n>>> Recherche locale multi-start...")
-        t_local = @elapsed x_local = descente_multi_start(x_construct, C, A, max_restarts=5, verbose=false)
+        t_local = @elapsed x_local = descente_profonde(x_construct, C, A, max_restarts=5, verbose=false)
         z_local = dot(C, x_local)
         t_total = t_construct + t_local
         
@@ -164,7 +164,7 @@ function experimentationSPP()
     afficher_resultats(resultats)
     sauvegarder_resultats(resultats)
     
-    return resultats
+    return nothing
 end
 
 function afficher_resultats(resultats)

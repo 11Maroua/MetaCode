@@ -3,254 +3,257 @@ using LinearAlgebra
 include("loadSPP.jl")
 include("Glouton.jl")
 
-# ==================== CONSTRUCTION VOISINAGES ====================
 
-function generer_voisinage_2_1(x, C, A)
-    n = length(x)
-    vars_in = findall(x .== 1)
-    vars_out = findall(x .== 0)
+function peut_ajouter(x, A, j_new)
     
-    z_current = dot(C, x)
+    for i in 1:size(A, 1)
+        if A[i, j_new] == 1
+            # Chercher un conflit avec les variables déjà sélectionnées
+            for k in findall(x .== 1)  # Itérer seulement sur les variables actives
+                if A[i, k] == 1
+                    return false  # Conflit détecté
+                end
+            end
+        end
+    end
+    return true
+end
+
+function conflit(A, j, k)
+   
+    for i in 1:size(A, 1)
+        if A[i, j] == 1 && A[i, k] == 1
+            return true
+        end
+    end
+    return false
+end
+
+# ==================== DESCENTE PROFONDE ====================
+
+function descente_profonde(x_initial, C, A; max_iter=1000, verbose=true)
+   
+    if verbose
+        println("\n=== DESCENTE PROFONDE ===")
+        println("Solution initiale: Z = $(dot(C, x_initial)) ($(sum(x_initial)) variables)")
+    end
+    
+    x_current = copy(x_initial)
+    z_current = dot(C, x_current)
+    iteration = 0
+    ameliorations = 0
+    
+    while iteration < max_iter
+        iteration += 1
+        amelioration_trouvee = false
+        meilleur_gain = 0.0
+        meilleur_voisin = nothing
+        
+        vars_in = findall(x_current .== 1)
+        vars_out = findall(x_current .== 0)
+        
+        vars_out_sorted = vars_out[sortperm(C[vars_out], rev=true)]
+        
+        # ===== Stratégie 1: Échange 1-1 (drop + add) =====
+        for drop in vars_in
+            x_temp = copy(x_current)
+            x_temp[drop] = 0
+            
+            # Explorer seulement les meilleures variables candidates
+            for add in vars_out_sorted[1:min(50, length(vars_out_sorted))]
+                if peut_ajouter(x_temp, A, add)
+                    gain = C[add] - C[drop]
+                    
+                    if gain > meilleur_gain
+                        meilleur_gain = gain
+                        meilleur_voisin = copy(x_temp)
+                        meilleur_voisin[add] = 1
+                        amelioration_trouvee = true
+                    end
+                end
+            end
+        end
+        
+        # ===== Stratégie 2: Échange 2-1 (si pas d'amélioration en 1-1) =====
+        if !amelioration_trouvee && length(vars_in) >= 2
+            x_voisin, gain = chercher_voisin_2_1(x_current, C, A, vars_in, vars_out_sorted)
+            if gain > meilleur_gain
+                meilleur_gain = gain
+                meilleur_voisin = x_voisin
+                amelioration_trouvee = true
+            end
+        end
+        
+        # ===== Appliquer la meilleure amélioration ou arrêter =====
+        if !amelioration_trouvee
+            if verbose
+                println("Optimum local atteint après $iteration itérations")
+            end
+            break
+        end
+        
+        x_current = meilleur_voisin
+        z_current += meilleur_gain
+        ameliorations += 1
+        
+        if verbose && iteration % 10 == 0
+            println("Itération $iteration: Z = $z_current (+$(round(meilleur_gain, digits=2)))")
+        end
+    end
+    
+    if verbose
+        println("\n=== RÉSULTAT DESCENTE PROFONDE ===")
+        println("Itérations: $iteration")
+        println("Améliorations: $ameliorations")
+        println("Solution finale: Z = $z_current ($(sum(x_current)) variables)")
+    end
+    
+    return x_current
+end
+
+function chercher_voisin_2_1(x, C, A, vars_in, vars_out_sorted)
+    
     meilleur_voisin = copy(x)
-    meilleur_z = z_current
-    amelioration = false
-    compteur = 0
+    meilleur_gain = 0.0
     
-    for idx1 in 1:length(vars_in)-1
-        for idx2 in idx1+1:length(vars_in)
-            drop1 = vars_in[idx1]
-            drop2 = vars_in[idx2]
+    # Explorer les paires de variables à retirer
+    for i in 1:length(vars_in)-1
+        for j in i+1:min(i+20, length(vars_in))  # Limiter les paires testées
+            drop1 = vars_in[i]
+            drop2 = vars_in[j]
             
             x_temp = copy(x)
             x_temp[drop1] = 0
             x_temp[drop2] = 0
             
-            for add in vars_out
-                compteur += 1
-                
+            # Tester les meilleures variables candidates
+            for add in vars_out_sorted[1:min(30, length(vars_out_sorted))]
                 if peut_ajouter(x_temp, A, add)
-                    x_voisin = copy(x_temp)
-                    x_voisin[add] = 1
-                    z_voisin = dot(C, x_voisin)
+                    gain = C[add] - C[drop1] - C[drop2]
                     
-                    if z_voisin > meilleur_z
-                        meilleur_z = z_voisin
-                        meilleur_voisin = copy(x_voisin)
-                        amelioration = true
+                    if gain > meilleur_gain
+                        meilleur_gain = gain
+                        meilleur_voisin = copy(x_temp)
+                        meilleur_voisin[add] = 1
                     end
                 end
             end
         end
     end
     
-    gain = meilleur_z - z_current
-    return meilleur_voisin, gain, amelioration, compteur
+    return meilleur_voisin, meilleur_gain
 end
 
-function generer_voisinage_1_1(x, C, A)
-    n = length(x)
-    vars_in = findall(x .== 1)
-    vars_out = findall(x .== 0)
+# ==================== DESCENTE RAPIDE ====================
+
+function descente_rapide(x_initial, C, A; verbose=true)
     
-    z_current = dot(C, x)
-    meilleur_voisin = copy(x)
-    meilleur_z = z_current
-    amelioration = false
-    compteur = 0
+    if verbose
+        println("\n=== DESCENTE RAPIDE ===")
+        println("Solution initiale: Z = $(dot(C, x_initial)) ($(sum(x_initial)) variables)")
+    end
     
-    for drop in vars_in
-        x_temp = copy(x)
-        x_temp[drop] = 0
+    x_current = copy(x_initial)
+    z_current = dot(C, x_current)
+    iteration = 0
+    ameliorations = 0
+    
+    while true
+        iteration += 1
+        amelioration_trouvee = false
         
-        for add in vars_out
-            compteur += 1
+        vars_in = findall(x_current .== 1)
+        vars_out = findall(x_current .== 0)
+        vars_out_sorted = vars_out[sortperm(C[vars_out], rev=true)]
+        
+        # Chercher la première amélioration
+        for drop in vars_in
+            x_temp = copy(x_current)
+            x_temp[drop] = 0
             
-            if peut_ajouter(x_temp, A, add)
-                x_voisin = copy(x_temp)
-                x_voisin[add] = 1
-                z_voisin = dot(C, x_voisin)
-                
-                if z_voisin > meilleur_z
-                    meilleur_z = z_voisin
-                    meilleur_voisin = copy(x_voisin)
-                    amelioration = true
-                end
-            end
-        end
-    end
-    
-    gain = meilleur_z - z_current
-    return meilleur_voisin, gain, amelioration, compteur
-end
-
-function generer_voisinage_3_1(x, C, A)
-    n = length(x)
-    vars_in = findall(x .== 1)
-    vars_out = findall(x .== 0)
-    
-    if length(vars_in) < 3
-        return copy(x), 0.0, false, 0
-    end
-    
-    z_current = dot(C, x)
-    meilleur_voisin = copy(x)
-    meilleur_z = z_current
-    amelioration = false
-    compteur = 0
-    
-    for idx1 in 1:length(vars_in)-2
-        for idx2 in idx1+1:length(vars_in)-1
-            for idx3 in idx2+1:length(vars_in)
-                drop1 = vars_in[idx1]
-                drop2 = vars_in[idx2]
-                drop3 = vars_in[idx3]
-                
-                x_temp = copy(x)
-                x_temp[drop1] = 0
-                x_temp[drop2] = 0
-                x_temp[drop3] = 0
-                
-                for add in vars_out
-                    compteur += 1
+            for add in vars_out_sorted[1:min(30, length(vars_out_sorted))]
+                if peut_ajouter(x_temp, A, add)
+                    gain = C[add] - C[drop]
                     
-                    if peut_ajouter(x_temp, A, add)
-                        x_voisin = copy(x_temp)
-                        x_voisin[add] = 1
-                        z_voisin = dot(C, x_voisin)
+                    if gain > 0
+                        x_current = copy(x_temp)
+                        x_current[add] = 1
+                        z_current += gain
+                        ameliorations += 1
+                        amelioration_trouvee = true
                         
-                        if z_voisin > meilleur_z
-                            meilleur_z = z_voisin
-                            meilleur_voisin = copy(x_voisin)
-                            amelioration = true
+                        if verbose && ameliorations % 10 == 0
+                            println("Amélioration $ameliorations: Z = $z_current")
                         end
+                        break
                     end
                 end
             end
-        end
-    end
-    
-    gain = meilleur_z - z_current
-    return meilleur_voisin, gain, amelioration, compteur
-end
-
-function perturber_solution(x, C, A)
-    x_perturbe = copy(x)
-    vars_in = findall(x .== 1)
-    
-    if length(vars_in) >= 3
-        to_remove = vars_in[1:3]
-        for var in to_remove
-            x_perturbe[var] = 0
-        end
-    end
-    
-    # Réparer la solution de manière gloutonne
-    vars_out = findall(x_perturbe .== 0)
-    for j in vars_out
-        if peut_ajouter(x_perturbe, A, j)
-            x_perturbe[j] = 1
-        end
-    end
-    
-    return x_perturbe
-end
-
-# ==================== DESCENTE AVEC MULTI-START ====================
-
-function descente_multi_start(x_initial, C, A; max_restarts=5, verbose=true)
-    
-    if verbose
-        println("=== DESCENTE MULTI-START (", max_restarts, " redémarrages) ===")
-        println("="^70)
-    end
-    
-    x_best = copy(x_initial)
-    z_best = dot(C, x_initial)
-    
-    if verbose
-        println("Solution initiale: Z = ", z_best, " (", sum(x_best), " variables)")
-    end
-    
-    for restart in 1:max_restarts
-        if verbose
-            println("\n---- RESTART ", restart, "/", max_restarts, " ----")
-        end
-        
-        # Partir de la meilleure solution actuelle
-        x = copy(x_best)
-        
-        # Si ce n'est pas le premier restart on perturbe
-        if restart > 1
-            if verbose
-                println("Perturbation de la solution...")
-            end
-            x = perturber_solution(x, C, A)
-            z_perturbe = dot(C, x)
-            if verbose
-                println("Après perturbation: Z = ", z_perturbe, " (", sum(x), " variables)")
-            end
-        end
-        
-        # Descente profonde
-        iteration = 0
-        ameliorations_locales = 0
-        
-        while true
-            iteration += 1
             
-            # Essayer d'abord le voisinage 2-1
-            x_nouveau, gain, amelioration, nb_voisins = generer_voisinage_2_1(x, C, A)
-            
-            # Si bloqué, essayer le voisinage 1-1
-            if !amelioration || gain <= 0
-                x_nouveau, gain, amelioration, nb_voisins = generer_voisinage_1_1(x, C, A)
-            end
-            
-            # Si toujours bloqué, essayer 3-1
-            if !amelioration || gain <= 0
-                x_nouveau, gain, amelioration, nb_voisins = generer_voisinage_3_1(x, C, A)
-            end
-            
-            #sinon, optimum local atteint
-            if !amelioration || gain <= 0
-                if verbose
-                    println("  Itération ", iteration, ": Optimum local atteint")
-                end
+            if amelioration_trouvee
                 break
             end
-            
-            x = x_nouveau
-            z_new = dot(C, x)
-            ameliorations_locales += 1
-            if verbose
-                println("  Itération ", iteration, ": Z = ", z_new, " (+", round(gain, digits=2), 
-                        ") - ", sum(x), " vars")
-            end
         end
         
-        # Vérifier si on a trouvé une meilleure solution globale
-        z_current = dot(C, x)
-        if z_current > z_best
-            improvement = z_current - z_best
-            x_best = copy(x)
-            z_best = z_current
+        if !amelioration_trouvee
             if verbose
-                println("\n NOUVELLE MEILLEURE SOLUTION: Z = ", z_best, " (+", 
-                        round(improvement, digits=2), ")")
+                println("Optimum local atteint après $iteration itérations")
             end
-        else
-            if verbose
-                println("\nPas d'amélioration sur ce restart")
-            end
+            break
         end
     end
     
     if verbose
-        println("================ SOLUTION FINALE =============")
-        println("Z initiale: ", dot(C, x_initial))
-        println("Z finale:   ", z_best, " (+", round(z_best - dot(C, x_initial), digits=2), ")")
-        println("Variables:  ", sum(x_best))
+        println("\n=== RÉSULTAT DESCENTE RAPIDE ===")
+        println("Améliorations: $ameliorations")
+        println("Solution finale: Z = $z_current ($(sum(x_current)) variables)")
     end
     
-    return x_best
+    return x_current
 end
+
+# ==================== FONCTION PRINCIPALE ====================
+
+function resoudre_SPP_heuristique(C, A; methode="profonde", verbose=true)
+    
+    if verbose
+        println("=" ^ 60)
+        println("RÉSOLUTION SPP - Méthode: $(uppercase(methode))")
+        println("=" ^ 60)
+    end
+    
+    # Phase 1: Construction gloutonne
+    if verbose
+        println("\n=== PHASE 1: CONSTRUCTION GLOUTONNE ===")
+    end
+    x_glouton = construction_gloutonne(C, A, verbose=verbose)
+    z_glouton = dot(C, x_glouton)
+    
+    # Phase 2: Amélioration locale
+    if verbose
+        println("\n=== PHASE 2: AMÉLIORATION LOCALE ===")
+    end
+    
+    if methode == "rapide"
+        x_final = descente_rapide(x_glouton, C, A, verbose=verbose)
+    elseif methode == "profonde"
+        x_final = descente_profonde(x_glouton, C, A, verbose=verbose)
+    else
+        error("Méthode inconnue: $methode. Utilisez 'rapide' ou 'profonde'")
+    end
+    
+    z_final = dot(C, x_final)
+    
+    if verbose
+        println("\n")
+        println("======= RÉSULTAT FINAL ======")
+        println("Z initial (glouton):  $z_glouton")
+        println("Z final (amélioré):   $z_final")
+        println("Amélioration absolue: +$(z_final - z_glouton)")
+        println("Amélioration relative: +$(round(100*(z_final - z_glouton)/z_glouton, digits=2))%")
+        println("Nombre de variables: $(sum(x_final))")
+    end
+    
+    return x_final
+end
+
