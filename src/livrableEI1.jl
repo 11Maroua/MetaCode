@@ -92,11 +92,11 @@ function experimentationSPP()
         C, A = loadSPP(inst)
         m, n = size(A)
         
-        # ===== SOLUTION EXACTE (seulement si n <= 500) =====
+        # ===== SOLUTION EXACTE (seulement si n <= 100) =====
         z_opt = missing
         t_opt = missing
         
-        if n <= 500
+        if n <= 100
             println("\n>>> Résolution exacte (GLPK)...")
             try
                 res_exact = resoudreSPP_exact(inst)
