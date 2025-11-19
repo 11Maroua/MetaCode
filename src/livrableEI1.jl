@@ -115,7 +115,7 @@ function experimentationSPP()
         
         # ===== HEURISTIQUE CONSTRUCTION =====
         println("\n>>> Construction gloutonne...")
-        t_construct = @elapsed x_construct = construction_gloutonne(C, A)
+        t_construct = @elapsed x_construct = construction_gloutonne(C, A, verbose=false)
         z_construct = dot(C, x_construct)
         
         # Calcul du gap seulement si solution optimale disponible
@@ -129,7 +129,7 @@ function experimentationSPP()
         
         # ===== RECHERCHE LOCALE =====
         println("\n>>> Recherche locale multi-start...")
-        t_local = @elapsed x_local = descente_multi_start(x_construct, C, A, max_restarts=5)
+        t_local = @elapsed x_local = descente_multi_start(x_construct, C, A, max_restarts=5, verbose=false)
         z_local = dot(C, x_local)
         t_total = t_construct + t_local
         

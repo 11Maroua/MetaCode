@@ -157,28 +157,38 @@ end
 
 # ==================== DESCENTE AVEC MULTI-START ====================
 
-function descente_multi_start(x_initial, C, A; max_restarts=5)
+function descente_multi_start(x_initial, C, A; max_restarts=5, verbose=true)
     
-    println("=== DESCENTE MULTI-START (", max_restarts, " redémarrages) ===")
-    println("="^70)
+    if verbose
+        println("=== DESCENTE MULTI-START (", max_restarts, " redémarrages) ===")
+        println("="^70)
+    end
     
     x_best = copy(x_initial)
     z_best = dot(C, x_initial)
     
-    println("Solution initiale: Z = ", z_best, " (", sum(x_best), " variables)")
+    if verbose
+        println("Solution initiale: Z = ", z_best, " (", sum(x_best), " variables)")
+    end
     
     for restart in 1:max_restarts
-        println("\n---- RESTART ", restart, "/", max_restarts, " ----")
+        if verbose
+            println("\n---- RESTART ", restart, "/", max_restarts, " ----")
+        end
         
         # Partir de la meilleure solution actuelle
         x = copy(x_best)
         
         # Si ce n'est pas le premier restart on perturbe
         if restart > 1
-            println("Perturbation de la solution...")
+            if verbose
+                println("Perturbation de la solution...")
+            end
             x = perturber_solution(x, C, A)
             z_perturbe = dot(C, x)
-            println("Après perturbation: Z = ", z_perturbe, " (", sum(x), " variables)")
+            if verbose
+                println("Après perturbation: Z = ", z_perturbe, " (", sum(x), " variables)")
+            end
         end
         
         # Descente profonde
@@ -203,15 +213,19 @@ function descente_multi_start(x_initial, C, A; max_restarts=5)
             
             #sinon, optimum local atteint
             if !amelioration || gain <= 0
-                println("  Itération ", iteration, ": Optimum local atteint")
+                if verbose
+                    println("  Itération ", iteration, ": Optimum local atteint")
+                end
                 break
             end
             
             x = x_nouveau
             z_new = dot(C, x)
             ameliorations_locales += 1
-            println("  Itération ", iteration, ": Z = ", z_new, " (+", round(gain, digits=2), 
-                    ") - ", sum(x), " vars")
+            if verbose
+                println("  Itération ", iteration, ": Z = ", z_new, " (+", round(gain, digits=2), 
+                        ") - ", sum(x), " vars")
+            end
         end
         
         # Vérifier si on a trouvé une meilleure solution globale
@@ -220,21 +234,23 @@ function descente_multi_start(x_initial, C, A; max_restarts=5)
             improvement = z_current - z_best
             x_best = copy(x)
             z_best = z_current
-            println("\n NOUVELLE MEILLEURE SOLUTION: Z = ", z_best, " (+", 
-                    round(improvement, digits=2), ")")
+            if verbose
+                println("\n NOUVELLE MEILLEURE SOLUTION: Z = ", z_best, " (+", 
+                        round(improvement, digits=2), ")")
+            end
         else
-            println("\nPas d'amélioration sur ce restart")
+            if verbose
+                println("\nPas d'amélioration sur ce restart")
+            end
         end
     end
     
-    
-    println("================ SOLUTION FINALE =============")
-    println("Z initiale: ", dot(C, x_initial))
-    println("Z finale:   ", z_best, " (+", round(z_best - dot(C, x_initial), digits=2), ")")
-    println("Variables:  ", sum(x_best))
-   
+    if verbose
+        println("================ SOLUTION FINALE =============")
+        println("Z initiale: ", dot(C, x_initial))
+        println("Z finale:   ", z_best, " (+", round(z_best - dot(C, x_initial), digits=2), ")")
+        println("Variables:  ", sum(x_best))
+    end
     
     return x_best
 end
-
-

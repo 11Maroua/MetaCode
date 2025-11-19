@@ -2,14 +2,16 @@ using LinearAlgebra
 
 # ---- Construction Gloutonne pour SPP ----
 
-function construction_gloutonne(C, A)
+function construction_gloutonne(C, A; verbose=true)
     m, n = size(A)
     x = zeros(Int, n)        
     variables_restantes = collect(1:n)
 
-    println("=== DEBUT CONSTRUCTION GLOUTONNE ===")
-    println("m = ", m, " contraintes, n = ", n, " variables")
-    println()
+    if verbose
+        println("=== DEBUT CONSTRUCTION GLOUTONNE ===")
+        println("m = ", m, " contraintes, n = ", n, " variables")
+        println()
+    end
     
     while !isempty(variables_restantes)
         meilleure_utilite = -Inf
@@ -50,11 +52,13 @@ function construction_gloutonne(C, A)
     valeur_totale = dot(C, x)
     nb_variables = sum(x)
     
-    println("\n=== SOLUTION FINALE ===")
-    println("Solution: ", x)
-    println("Variables sélectionnées: ", findall(x->x==1, x))
-    println("Nombre de variables: ", nb_variables)
-    println("Valeur totale Z = : ", valeur_totale)
+    if verbose
+        println("\n=== SOLUTION FINALE ===")
+        println("Solution: ", x)
+        println("Variables sélectionnées: ", findall(x->x==1, x))
+        println("Nombre de variables: ", nb_variables)
+        println("Valeur totale Z = : ", valeur_totale)
+    end
     
     return x
 end
@@ -75,4 +79,3 @@ function peut_ajouter(x, A, j_new)
     end
     return true
 end
-
