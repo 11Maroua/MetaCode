@@ -15,7 +15,7 @@ function utilite_variable(C, A, j)
     if nb_contraintes > 0
         return C[j] / nb_contraintes
     else
-        return C[j]  # même cas particulier que dans ton glouton
+        return C[j]  
     end
 end
 
@@ -116,8 +116,8 @@ function ACO_SPP(C, A;
                  Q::Float64         = 0.01,   # intensité dépôt phéromone
                  tau0::Float64      = 1.0,
                  tau_min::Float64   = 1e-6,
-                 tau_max::Float64   = 10.0,
-                 max_restarts_ls::Int = 1)    # pour descente_multi_start
+                 tau_max::Float64   = 10.0
+                )   
 
     m, n = size(A)
 
@@ -144,9 +144,8 @@ function ACO_SPP(C, A;
             # 1) Construction par fourmi
             x = construction_par_fourmi(C, A, tau; alpha=alpha, beta=beta)
 
-            # 2) Descente locale multi-start (hybridation ACO + LS)
-            #    Si tu veux limiter le temps, mets max_restarts_ls=1 ou 2
-            x = descente_multi_start(x, C, A; max_restarts=max_restarts_ls)
+            # 2) Descente locale 
+            x = descente_rapide(x, C, A,verbose=true)
 
             v = valeur_solution(C, x)
             push!(solutions, x)
@@ -166,7 +165,6 @@ function ACO_SPP(C, A;
 
         # --- Dépôt de phéromones par la meilleure solution globale (schéma élitiste) ---
         for j in findall(==(1), meilleure_solution_globale)
-            # Comme on MAXIMISE, déposer proportionnellement à Z
             tau[j] += Q * max(meilleure_valeur_globale, 0.0)
         end
 
@@ -186,13 +184,13 @@ function ACO_SPP(C, A;
 end
 
 
-C, A = loadSPP("Data/pb_200rnd0100.dat")
+C, A = loadSPP("../dat/pb_500rnd0300.dat")
 meilleure_sol, meilleure_valeur, tau_final =
     @time ACO_SPP(C, A;
             nb_iterations=10,
-            nb_fourmis=5,
+            nb_fourmis=18,
             alpha=1.0,
             beta=2.0,
             rho=0.1,
-            Q=0.01,
-            max_restarts_ls=1) 
+            Q=0.10,
+            ) 
