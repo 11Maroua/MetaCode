@@ -108,7 +108,7 @@ function build_solution_exploration!(
     A::AbstractMatrix{<:Integer},
     pher::Vector{Float64},
     conf::Vector{Vector{Int}},
-    η::AbstractVector,
+    eta::AbstractVector,
     I::BitVector,
     candidats::Vector{Int},
     attractivites::Vector{Float64},
@@ -133,7 +133,7 @@ function build_solution_exploration!(
 
         @inbounds for j in 1:n
             if I[j]
-                val = (pher[j]^alpha) * (η[j]^beta)
+                val = (pher[j]^alpha) * (eta[j]^beta)
                 nbC += 1
                 candidats[nbC] = j
                 attractivites[nbC] = val
@@ -232,7 +232,7 @@ function ACO_SPP(C, A, conf;
     I = trues(n)
     candidats = Vector{Int}(undef, n)
     attractivites = Vector{Float64}(undef, n)
-    η = [utilite_variable(C, A, j) for j in 1:n]
+    eta = [utilite_variable(C, A, j) for j in 1:n]
 
     best_global = zeros(Int, n)
     best_global_val = -Inf
@@ -245,8 +245,8 @@ function ACO_SPP(C, A, conf;
         println("Variables     : $n")
         println("Fourmis       : $maxAnt")
         println("Itérations    : $maxIter")
-        println("ρE (evap)     : $rhoE")
-        println("φ₀ (init)     : $phiInit")
+        println("(evap)     : $rhoE")
+        println("(init)     : $phiInit")
         println("Exploitation  : toutes les $(round(Int,iterOnExploit*maxIter)) itérations")
         println("Descente locale : $(do_local_search ? "Activée" : "Désactivée")")
         println("-------------------------------------------------------")
@@ -273,7 +273,7 @@ function ACO_SPP(C, A, conf;
             if exploit
                 build_solution_exploitation!(x, C, A, pher, conf, I)
             else
-                build_solution_exploration!(x, C, A, pher, conf, η,
+                build_solution_exploration!(x, C, A, pher, conf, eta,
                                             I, candidats, attractivites,
                                             iter, maxIter)
             end
