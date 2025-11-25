@@ -144,9 +144,9 @@ function chercher_voisin_2_1(x, C, A, vars_in, vars_out_sorted)
     return meilleur_voisin, meilleur_gain
 end
 
-# ==================== DESCENTE RAPIDE ====================
+# ==================== DESCENTE SIMPLE ====================
 
-function descente_rapide(x_initial, C, A; verbose=true)
+function descente_simple(x_initial, C, A; verbose=true)
     
     if verbose
         println("\n=== DESCENTE RAPIDE ===")
@@ -235,7 +235,7 @@ function resoudre_SPP_heuristique(C, A; methode="profonde", verbose=true)
     end
     
     if methode == "rapide"
-        x_final = descente_rapide(x_glouton, C, A, verbose=verbose)
+        x_final = descente_simple(x_glouton, C, A, verbose=verbose)
     elseif methode == "profonde"
         x_final = descente_profonde(x_glouton, C, A, verbose=verbose)
     else

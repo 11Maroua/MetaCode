@@ -281,7 +281,7 @@ function ACO_SPP(C, A, conf;
             # Descente locale
             if do_local_search
                 val_before = dot(C, x)
-                x = descente_rapide(x, C, A,verbose=false)
+                x = descente_simple(x, C, A,verbose=false)
                 val_after = dot(C, x)
                 if verbose && val_after != val_before
                     println("     Descente locale : $val_before → $val_after")

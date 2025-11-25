@@ -273,7 +273,7 @@ function algorithme_genetique_simple(C::Vector{Int}, A::Matrix{Int};
 end
 
 function tester_AG()
-    C, A = loadSPP("Data/pb_200rnd0100.dat")
+    C, A = loadSPP("dat/pb_200rnd0100.dat")
     
     println("Instance: $(length(C)) variables, $(size(A,1)) contraintes\n")
     

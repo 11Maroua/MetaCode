@@ -8,12 +8,14 @@ include("Exploration.jl")
 
 # ==================== GRASP IMPLÉMENTATION ====================
 
-function procedure_grasp(C, A, alpha)
+function procedure_grasp(C, A, alpha; verbose=false)
     n = length(C)
     x = zeros(Int, n)
     candidate_set = collect(1:n)
     
-    println("=== CONSTRUCTION GRASP (alpha = $(alpha)) ===")
+    if verbose
+        println("=== CONSTRUCTION GRASP (alpha = $(alpha)) ===")
+    end
     
     while !isempty(candidate_set)
         # Évaluer l'utilité de tous les candidats
@@ -60,61 +62,49 @@ function procedure_grasp(C, A, alpha)
             idx_to_remove = findfirst(==(j_selected), candidate_set)
             deleteat!(candidate_set, idx_to_remove)
             
-            println("  Sélection: variable $(j_selected), utilité = $(utilities[findfirst(==(j_selected), valid_candidates)])")
+            if verbose
+                println("  Sélection: variable $(j_selected), utilité = $(utilities[findfirst(==(j_selected), valid_candidates)])")
+            end
         else
             break
         end
     end
     
     valeur_totale = dot(C, x)
-    println("Solution construite: Z = $(valeur_totale), $(sum(x)) variables")
+    if verbose
+        println("Solution construite: Z = $(valeur_totale), $(sum(x)) variables")
+    end
     
     return x
 end
 
-function recherche_locale(x, C, A; max_iter=100)
+function recherche_locale(x, C, A; max_iter=100, verbose=false)
    
-    println("=== RECHERCHE LOCALE ===")
+    if verbose
+        println("=== RECHERCHE LOCALE ===")
+    end
     
     x_current = copy(x)
     z_current = dot(C, x_current)
     iteration = 0
-    improved = true
     
-    while improved && iteration < max_iter
-        iteration += 1
-        improved = false
-        
-        # Utilisation des fcts generer_voisinage du devoir1
-        voisinages = [
-            ("1-1", () -> generer_voisinage_1_1(x_current, C, A)),
-            ("2-1", () -> generer_voisinage_2_1(x_current, C, A)),
-            ("3-1", () -> generer_voisinage_3_1(x_current, C, A))
-        ]
-        
-        for (nom_voisinage, generer_voisin) in voisinages
-            x_voisin, gain, amelioration, nb_voisins = generer_voisin()
-            
-            if amelioration && gain > 0
-                x_current = x_voisin
-                z_current += gain
-                improved = true
-                println("  Itération $(iteration) - $(nom_voisinage): Z = $(z_current) (+$(round(gain, digits=2)))")
-                break  # Recommencer avec la nouvelle solution
-            end
-        end
+    # Utilisation de la fonction descente_simple de Exploration.jl
+    x_improved = descente_simple(x_current, C, A, verbose=verbose)
+    z_improved = dot(C, x_improved)
+    
+    if verbose
+        println("Recherche locale terminée: Z = $(z_improved) (amélioration: $(round(z_improved - z_current, digits=2)))")
     end
     
-    println("Recherche locale terminée: Z = $(z_current) (amélioration: $(round(z_current - dot(C, x), digits=2)))")
-    
-    return x_current
+    return x_improved
 end
 
-function grasp_complet(C, A; alpha=0.7, n_iter=100)
+function grasp_complet(C, A; alpha=0.7, n_iter=100, verbose=true)
    
-    
-    println("\n============ Résolution SPP avec GRASP  =========")
-    println("Paramètres: alpha=$(alpha), n_iter=$(n_iter)")
+    if verbose
+        println("\n============ Résolution SPP avec GRASP  =========")
+        println("Paramètres: alpha=$(alpha), n_iter=$(n_iter)")
+    end
    
     
     x_best = zeros(Int, length(C))
@@ -124,24 +114,25 @@ function grasp_complet(C, A; alpha=0.7, n_iter=100)
     best_history = Float64[]
     
     for iter in 1:n_iter
-        if iter == 1
+        if verbose && iter == 1
             println("Itération $(iter)/$(n_iter)")
         end
         
         # Phase de construction : calcul Ulimit + RCL
-        x_constructed = procedure_grasp(C, A, alpha)
+        x_constructed = procedure_grasp(C, A, alpha, verbose=false)
         z_constructed = dot(C, x_constructed)
         
         # Phase d'amélioration :recherche Locale
-        x_improved = recherche_locale(x_constructed, C, A)
+        x_improved = recherche_locale(x_constructed, C, A, verbose=false)
         z_improved = dot(C, x_improved)
         
         # Mise à jour de la meilleure solution
         if z_improved > z_best
             x_best = copy(x_improved)
             z_best = z_improved
-            println("Nouvelle meilleure solution à l'itération $(iter): Z = $(z_best)")
-            
+            if verbose
+                println("Nouvelle meilleure solution à l'itération $(iter): Z = $(z_best)")
+            end
         end
         
         push!(solutions_history, z_constructed)
@@ -149,11 +140,12 @@ function grasp_complet(C, A; alpha=0.7, n_iter=100)
         push!(best_history, z_best)
     end
     
-    
-    println("\n========= MEILLEURE SOLUTION TROUVEE AVEC GRASP ==========")
-    println("Meilleure solution: Z = $(z_best)")
-    println("Variables sélectionnées: $(sum(x_best))")
-    println("Paramètre alpha: $(alpha)")
+    if verbose
+        println("\n========= MEILLEURE SOLUTION TROUVEE AVEC GRASP ==========")
+        println("Meilleure solution: Z = $(z_best)")
+        println("Variables sélectionnées: $(sum(x_best))")
+        println("Paramètre alpha: $(alpha)")
+    end
    
     
     return x_best, solutions_history, improved_history, best_history
@@ -231,11 +223,13 @@ function update_probabilities(reactive_grasp, z_best, z_worst)
 end
 
 function reactive_grasp(C, A; alphas=[0.2, 0.5, 0.75, 0.9, 1.0], 
-                                    n_iter=1000, update_frequency=50)
+                                    n_iter=1000, update_frequency=50, verbose=true)
    
-    println("\n========== REACTIVE GRASP =========")
-    println("Valeurs alpha: $(alphas)")
-    println("Itérations: $(n_iter), Fréquence mise à jour: $(update_frequency)")
+    if verbose
+        println("\n========== REACTIVE GRASP =========")
+        println("Valeurs alpha: $(alphas)")
+        println("Itérations: $(n_iter), Fréquence mise à jour: $(update_frequency)")
+    end
     
     
     reactive_grasp = initialisation_ReactiveGRASP(alphas, update_frequency)
@@ -250,7 +244,7 @@ function reactive_grasp(C, A; alphas=[0.2, 0.5, 0.75, 0.9, 1.0],
     alpha_history = Float64[]
     
     for iter in 1:n_iter
-        if iter % 100 == 0
+        if verbose && iter % 100 == 0
             println("Itération $(iter)/$(n_iter)")
         end
         
@@ -259,10 +253,10 @@ function reactive_grasp(C, A; alphas=[0.2, 0.5, 0.75, 0.9, 1.0],
         alpha, alpha_index = select_Random_alpha(reactive_grasp)
         
         # Solution crée avec Grasp
-        x_constructed = procedure_grasp(C, A, alpha)
+        x_constructed = procedure_grasp(C, A, alpha, verbose=false)
         z_constructed = dot(C, x_constructed)
         
-        x_improved = recherche_locale(x_constructed, C, A)
+        x_improved = recherche_locale(x_constructed, C, A, verbose=false)
         z_improved = dot(C, x_improved)
         
         reactive_grasp.avg_values[alpha_index] = (reactive_grasp.avg_values[alpha_index] * reactive_grasp.counts[alpha_index] + z_improved) / 
@@ -282,9 +276,10 @@ function reactive_grasp(C, A; alphas=[0.2, 0.5, 0.75, 0.9, 1.0],
         # Mise à jour des probabilités
         if iter % update_frequency == 0
             update_probabilities(reactive_grasp, z_best, z_worst)
-            println("\n--- Mise à jour Reactive GRASP (itération $(iter)) ---")
-            println("Probabilités: $(round.(reactive_grasp.probabilities, digits=4))")
-            
+            if verbose
+                println("\n--- Mise à jour Reactive GRASP (itération $(iter)) ---")
+                println("Probabilités: $(round.(reactive_grasp.probabilities, digits=4))")
+            end
         end
         
         #creation d'un historique pour chaque alpha
@@ -294,11 +289,12 @@ function reactive_grasp(C, A; alphas=[0.2, 0.5, 0.75, 0.9, 1.0],
         push!(alpha_history, alpha)
     end
     
-  
-    println("\n========== RÉSULTATS FINAUX REACTIVE GRASP ===========")
-    println("Meilleure solution: Z = $(z_best)")
-    println("Variables sélectionnées: $(sum(x_best))")
-    println("Distribution finale alphas values: $(round.(reactive_grasp.probabilities, digits=4))")
+    if verbose
+        println("\n========== RÉSULTATS FINAUX REACTIVE GRASP ===========")
+        println("Meilleure solution: Z = $(z_best)")
+        println("Variables sélectionnées: $(sum(x_best))")
+        println("Distribution finale alphas values: $(round.(reactive_grasp.probabilities, digits=4))")
+    end
     
     
     return x_best, solutions_history, improved_history, best_history, alpha_history, reactive_grasp.probabilities
@@ -337,19 +333,19 @@ function comparer_methodes(fname; n_iter=100)
     C, A = loadSPP(fname)
     
     # GRASP standard
-    println("\n>>> GRASP Standard (α=0.7)")
-    @time x_grasp, const_grasp, impr_grasp, best_grasp = grasp_complet(C, A, α=0.7, n_iter=n_iter, verbose=false)
+    println("\n>>> GRASP Standard (alpha=0.7)")
+    @time x_grasp, const_grasp, impr_grasp, best_grasp = grasp_complet(C, A, alpha=0.7, n_iter=n_iter, verbose=false)
     
     # Reactive GRASP
     println("\n>>> Reactive GRASP")
-    @time x_reactive, const_react, impr_react, best_react, α_hist, probs = reactive_grasp(C, A, n_iter=n_iter, verbose=false)
+    @time x_reactive, const_react, impr_react, best_react, alpha_hist, probs = reactive_grasp(C, A, n_iter=n_iter, verbose=false)
     
     # Résultats
     println("\n" * "="^70)
     println("RÉSULTATS DE COMPARAISON")
     println("GRASP Standard:    Z = $(dot(C, x_grasp))")
     println("Reactive GRASP:    Z = $(dot(C, x_reactive))")
-    println("Distribution α finale: $(round.(probs, digits=4))")
+    println("Distribution alpha finale: $(round.(probs, digits=4))")
     println("="^70)
     
     return (x_grasp, best_grasp), (x_reactive, best_react)
