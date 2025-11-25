@@ -1,0 +1,160 @@
+\documentclass[11pt,a4paper]{article}
+
+\usepackage[utf8]{inputenc}
+\usepackage[french]{babel}
+\usepackage{geometry}
+\usepackage{amsmath,amssymb}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{multirow}
+\usepackage{hyperref}
+
+\geometry{margin=2.5cm}
+
+\title{%
+    \textbf{Métaheuristiques pour le Set Packing Problem} \\
+    \large Exercices d'Implémentation
+}
+\author{NAIT SLIMANI Maroua \& MOLLI Lila \& ABID Ikram \\ Master Informatique \\ Nantes Université}
+\date{Année 2025-2026}
+
+\begin{document}
+
+\maketitle
+\tableofcontents
+\newpage
+
+%=============================================================================
+\section{Introduction}
+
+Le Set Packing Problem (SPP) est un problème d'optimisation combinatoire NP-difficile.
+
+\subsection{Définition}
+
+Maximiser :
+\begin{equation}
+    \max_{x \in \{0,1\}^n} \sum_{j=1}^{n} c_j x_j
+\end{equation}
+
+Sous contraintes :
+\begin{equation}
+    \sum_{j=1}^{n} a_{ij} x_j \leq 1, \quad \forall i \in \{1,\ldots,m\}
+\end{equation}
+
+%=============================================================================
+\section{EI1 : Heuristiques Constructives}
+
+\subsection{Heuristique gloutonne}
+
+Construction itérative basée sur l'utilité :
+\begin{equation}
+    u_j = \frac{c_j}{\sum_{i=1}^{m} a_{ij}}
+\end{equation}
+
+\subsection{Recherche locale}
+
+Descente profonde avec voisinages :
+\begin{itemize}
+    \item \textbf{1-1} : retirer 1, ajouter 1
+    \item \textbf{2-1} : retirer 2, ajouter 1
+\end{itemize}
+
+\subsection{Résultats EI1}
+
+% Tableau généré automatiquement
+\input{res/tableau_EI1.tex}
+
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=0.95\textwidth]{res/graphiques_EI1.pdf}
+    \caption{Résultats EI1}
+    \label{fig:ei1}
+\end{figure}
+
+\subsection{Analyse EI1}
+
+\paragraph{Qualité :} 
+Le gap moyen après recherche locale est de \textbf{XX\%}.
+
+\paragraph{Temps :}
+Speedup moyen de \textbf{XXx} par rapport à GLPK.
+
+%=============================================================================
+\section{EI2 : GRASP et Reactive GRASP}
+
+\subsection{GRASP Standard}
+
+Phase construction avec RCL :
+\begin{equation}
+    \text{RCL} = \{j : u_j \geq u_{\min} + \alpha (u_{\max} - u_{\min})\}
+\end{equation}
+
+\subsection{Reactive GRASP}
+
+Adaptation automatique de $\alpha$ par qualité :
+\begin{equation}
+    p_k = \frac{q_k}{\sum_{i} q_i}, \quad q_k = \frac{\bar{z}_k - z_{\text{worst}}}{z_{\text{best}} - z_{\text{worst}}}
+\end{equation}
+
+\subsection{Résultats EI2}
+
+% Tableau généré automatiquement
+\input{res/tableau_EI2.tex}
+
+\begin{figure}[htbp]
+    \centering
+    \includegraphics[width=0.95\textwidth]{res/graphiques_EI2.pdf}
+    \caption{Comparaison GRASP vs Reactive GRASP}
+    \label{fig:ei2}
+\end{figure}
+
+\subsection{Analyse EI2}
+
+\paragraph{GRASP vs Reactive :}
+Reactive GRASP obtient de meilleurs résultats dans \textbf{XX\%} des cas.
+
+\paragraph{Distribution $\alpha$ :}
+Les valeurs moyennes ($\alpha = 0.5$-$0.75$) sont privilégiées.
+
+%=============================================================================
+\section{EI3 : ACO vs AG vs GRASP}
+
+% À compléter avec ACO ou autre
+
+%=============================================================================
+\section{Conclusion}
+
+Les heuristiques développées offrent un excellent compromis qualité/temps.
+
+%=============================================================================
+\appendix
+\section{Code}
+
+\subsection{Structure}
+
+\begin{verbatim}
+src/
+├── livrable.jl        # Fichier principal
+├── Glouton.jl
+├── Exploration.jl
+├── Grasp.jl
+└── ...
+
+dat/                   # 10 instances
+res/                   # Résultats générés
+doc/                   # Rapport
+\end{verbatim}
+
+\subsection{Utilisation}
+
+\begin{verbatim}
+include("src/livrable.jl")
+
+# EI1
+experimentationSPP()
+
+# EI2
+experimentationSPP_EI2(n_runs=5)
+\end{verbatim}
+
+\end{document}
