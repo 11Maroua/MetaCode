@@ -1,25 +1,21 @@
 using LinearAlgebra
-using Random
-
+using Statistics
 include("loadSPP.jl")
-include("Glouton.jl")     
-include("Exploration.jl") 
+include("Exploration.jl")
+include("Glouton.jl")
 
-##############################
-#Rajout de la fonction utilite 
-##############################
 
+############################################
+# Utilité d'une variable
+############################################
 function utilite_variable(C, A, j)
-    s = 0
-    @inbounds for k in 1:size(A,1)
-        s += A[k,j]
-    end
+    s = sum(A[:, j])
     return s > 0 ? C[j] / s : C[j]
 end
 
-##############################
+############################################
 # Roulette biaisée
-##############################
+############################################
 function roulette_biaise(weights::AbstractVector{<:Real})
     total = sum(weights)
     if total <= 0
@@ -36,14 +32,10 @@ function roulette_biaise(weights::AbstractVector{<:Real})
     return length(weights)
 end
 
-
-##############################
+############################################
 # Mise à jour des phéromones
-##############################
-function update_pheromones!(pher::Vector{Float64},
-                            best_iter_sol::Vector{Int},
-                            rhoE::Float64,
-                            rhoD::Float64)
+############################################
+function update_pheromones!(pher, best_iter_sol, rhoE, rhoD)
     @inbounds for i in 1:length(pher)
         pher[i] *= rhoE
         if best_iter_sol[i] == 1
@@ -52,14 +44,10 @@ function update_pheromones!(pher::Vector{Float64},
     end
 end
 
-
-##############################
-# Perturbation des phéromones
-##############################
-function disturb_pheromones!(pher::Vector{Float64},
-                             iter::Int,
-                             maxIter::Int)
-
+############################################
+# Perturbation
+############################################
+function disturb_pheromones!(pher, iter, maxIter)
     L = length(pher)
     factor = 0.95 * log10(iter) / log10(maxIter)
     lo = 0.05
@@ -84,22 +72,21 @@ function disturb_pheromones!(pher::Vector{Float64},
     end
 end
 
-
-##############################
+############################################
 # Pré-calcul des conflits
-# conf[j] = liste des variables i en conflit avec j
-##############################
-function precompute_conflicts(A::AbstractMatrix{<:Integer})
+############################################
+function precompute_conflicts(A)
     m, n = size(A)
     conflicts = Vector{Vector{Int}}(undef, n)
     @inbounds for j in 1:n
         list = Int[]
         for i in 1:n
-            i == j && continue
-            for k in 1:m
-                if A[k,j] == 1 && A[k,i] == 1
-                    push!(list, i)
-                    break
+            if i != j
+                for k in 1:m
+                    if A[k,j] == 1 && A[k,i] == 1
+                        push!(list, i)
+                        break
+                    end
                 end
             end
         end
@@ -108,28 +95,18 @@ function precompute_conflicts(A::AbstractMatrix{<:Integer})
     return conflicts
 end
 
-
-##############################
-# Construction - Exploration
-# (in-place, zéro allocation dans la boucle)
-##############################
+############################################
+# Construction exploration
+############################################
 function build_solution_exploration!(
-    x::Vector{Int},
-    C::AbstractVector,
-    A::AbstractMatrix{<:Integer},
-    pher::Vector{Float64},
-    conf::Vector{Vector{Int}},
-    eta::AbstractVector,
-    I::BitVector,
-    candidats::Vector{Int},
-    attractivites::Vector{Float64},
-    iter::Int,
-    maxIter::Int;
-    alpha::Float64 = 1.0,
-    beta::Float64 = 2.0
+    x, C, A, pher, conf, eta,
+    I, candidats, attractivites,
+    iter, maxIter;
+    alpha=1.0,
+    beta=2.0
 )
-    m, n = size(A)
 
+    n = length(C)
     @inbounds for j in 1:n
         x[j] = 0
         I[j] = true
@@ -157,18 +134,17 @@ function build_solution_exploration!(
 
         nbC == 0 && break
 
-        j_choisi = if rand() < P
+        j_sel = if rand() < P
             best_j
         else
             idx = roulette_biaise(@view attractivites[1:nbC])
             candidats[idx]
         end
 
-        x[j_choisi] = 1
-        I[j_choisi] = false
+        x[j_sel] = 1
+        I[j_sel] = false
 
-        @inbounds for t in eachindex(conf[j_choisi])
-            j_conf = conf[j_choisi][t]
+        @inbounds for j_conf in conf[j_sel]
             I[j_conf] = false
         end
     end
@@ -176,21 +152,14 @@ function build_solution_exploration!(
     return nothing
 end
 
-
-##############################
-# Construction - Exploitation
-# (in-place, zéro allocation dans la boucle)
-##############################
+############################################
+# Construction exploitation
+############################################
 function build_solution_exploitation!(
-    x::Vector{Int},
-    C::AbstractVector,
-    A::AbstractMatrix{<:Integer},
-    pher::Vector{Float64},
-    conf::Vector{Vector{Int}},
-    I::BitVector;
-    alpha::Float64 = 1.0
+    x, C, A, pher, conf, I;
+    alpha=1.0
 )
-    m, n = size(A)
+    n = length(C)
 
     @inbounds for j in 1:n
         x[j] = 0
@@ -215,9 +184,7 @@ function build_solution_exploitation!(
 
         x[best_j] = 1
         I[best_j] = false
-
-        @inbounds for t in eachindex(conf[best_j])
-            j_conf = conf[best_j][t]
+        @inbounds for j_conf in conf[best_j]
             I[j_conf] = false
         end
     end
@@ -225,18 +192,22 @@ function build_solution_exploitation!(
     return nothing
 end
 
-
-function ACO_SPP(C, A, conf; maxIter=30, maxAnt=15, rhoE=0.8, phiInit=1.0,
-                 iterOnExploit=0.75, iterStagnant=8, do_local_search=true,
-                 verbose=true, measure_interval=10.0)
+############################################
+# ACO COMPLET AVEC MESURE PAR ITERATIONS
+############################################
+function ACO_SPP(C, A, conf;
+                 maxIter=30,
+                 maxAnt=15,
+                 rhoE=0.8,
+                 phiInit=1.0,
+                 iterOnExploit=0.75,
+                 iterStagnant=8,
+                 do_local_search=true,
+                 verbose=true,
+                 measure_every=5)
 
     n = length(C)
-    pher = fill(Float64(phiInit), n)
-
-    # Historique
-    history = Vector{Tuple{Float64,Float64,Float64,Float64}}()
-    start_time = time()
-    last_measure = start_time
+    pher = fill(phiInit, n)
 
     x = zeros(Int, n)
     I = trues(n)
@@ -245,6 +216,7 @@ function ACO_SPP(C, A, conf; maxIter=30, maxAnt=15, rhoE=0.8, phiInit=1.0,
     eta = [utilite_variable(C, A, j) for j in 1:n]
 
     vals_fourmis = Vector{Float64}(undef, maxAnt)
+    history = Vector{Tuple{Int,Float64,Float64,Float64}}()
 
     best_global = zeros(Int, n)
     best_global_val = -Inf
@@ -256,8 +228,8 @@ function ACO_SPP(C, A, conf; maxIter=30, maxAnt=15, rhoE=0.8, phiInit=1.0,
         best_iter = zeros(Int, n)
 
         for ant in 1:maxAnt
-
-            exploit = (ant == 1) || (iter % round(Int, iterOnExploit * maxIter) == 0)
+            exploit = (ant == 1) ||
+                      (iter % round(Int, iterOnExploit * maxIter) == 0)
 
             if exploit
                 build_solution_exploitation!(x, C, A, pher, conf, I)
@@ -285,24 +257,26 @@ function ACO_SPP(C, A, conf; maxIter=30, maxAnt=15, rhoE=0.8, phiInit=1.0,
             end
         end
 
-        # --- Mise à jour phéromones ---
         rhoD = phiInit * (1 - rhoE)
         update_pheromones!(pher, best_iter, rhoE, rhoD)
 
-        # --- Mesure périodique ---
-        current_time = time()
-        if current_time - last_measure ≥ measure_interval
+        if iter - last_improvement >= iterStagnant &&
+           iter < 0.9 * maxIter
+            disturb_pheromones!(pher, iter, maxIter)
+        end
+
+        # --- Mesure basée sur les itérations ---
+        if iter % measure_every == 0
             zmin = minimum(vals_fourmis)
             zmax = maximum(vals_fourmis)
             zmoy = mean(vals_fourmis)
-
-            push!(history, (current_time - start_time, zmin, zmax, zmoy))
-            last_measure = current_time
+            push!(history, (iter, zmin, zmax, zmoy))
         end
     end
 
     return best_global, best_global_val, history
 end
+
 
 
 #= C, A = loadSPP("../dat/pb_2000rnd0100.dat")
@@ -322,21 +296,77 @@ end
  println("Best value = ", best_val) =#
 
 
+
+using Plots
+
+function plot_ACO_history(filename::String, history)
+    if isempty(history)
+        println("Aucun historique pour $filename — plot ignoré.")
+        return
+    end
+
+    # Extraction
+    iters = [h[1] for h in history]
+    zmin  = [h[2] for h in history]
+    zmax  = [h[3] for h in history]
+    zmoy  = [h[4] for h in history]
+
+    # === Courbes ===
+    p = plot(
+        iters, zmax;
+        label = "zMax",
+        color = :red,
+        lw = 2,
+    )
+    plot!(
+        p, iters, zmoy;
+        label = "zMoy",
+        color = :green,
+        lw = 2,
+    )
+    plot!(
+        p, iters, zmin;
+        label = "zMin",
+        color = :blue,
+        lw = 2,
+    )
+
+    # Mise en forme
+    xlabel!("Itérations ACO")
+    ylabel!("Valeurs de z(x)")
+    title!("ACO-SPP | z_min, z_moy, z_max | $(filename)")
+    plot!(p, grid = true)
+    plot!(p, legend = :bottomright)   # <-- correction ici
+
+    # Sauvegarde
+    output = "../doc/plot_$(filename).png"
+    savefig(p, output)
+    println("Plot sauvegardé : $output")
+end
+
+
+
+
+
 function experimentation_ACO(dir::String)
 
-    # Liste tous les fichiers du dossier
     files = readdir(dir)
+
+    # Fichier CSV global unique
+    out_file = "../doc/aco_results_all.csv"
+
+    # Écrire l'en-tête une seule fois
+    open(out_file, "w") do io
+        println(io, "filename,time,z_best")
+    end
 
     println("===================================================")
     println(" Lancement des expérimentations ACO sur le dossier : $dir")
-    println(" Fichiers détectés : ", length(files))
     println("===================================================\n")
 
     for file in files
-        
-        # Ignore les fichiers qui ne sont pas des .dat (optionnel)
-        endswith(file, ".dat") || continue
 
+        endswith(file, ".dat") || continue
         path = joinpath(dir, file)
 
         println("\n---------------- FICHIER : $file ----------------")
@@ -345,7 +375,8 @@ function experimentation_ACO(dir::String)
             C, A = loadSPP(path)
             conf = precompute_conflicts(A)
 
-            @elapsed best_sol, best_val = ACO_SPP(
+            # --- Exécution ACO ---
+            time_ACO = @elapsed best_sol, best_val, _ = ACO_SPP(
                 C, A, conf;
                 maxIter = 50,
                 maxAnt = 25,
@@ -354,20 +385,28 @@ function experimentation_ACO(dir::String)
                 iterOnExploit = 0.75,
                 iterStagnant = 8,
                 do_local_search = true,
-                verbose = false
+                verbose = false,
+                measure_every = 10_000_000   # désactivation de l’history
             )
 
             println("Résultat pour $file : Best value = $best_val")
 
+            # --- Ajouter une ligne dans le fichier global ---
+            open(out_file, "a") do io
+                println(io, "$file,$time_ACO,$best_val")
+            end
+
         catch e
             println("   ERREUR lors du traitement de $file :")
             println(e)
-            continue
         end
     end
 
     println("\n===================================================")
-    println("       EXPÉRIMENTATION ACO TERMINÉE")
+    println("   EXPÉRIMENTATION ACO TERMINÉE — CSV généré :")
+    println("   $out_file")
     println("===================================================")
 end
 
+
+experimentation_ACO("../dat/")
