@@ -5,6 +5,17 @@ include("loadSPP.jl")
 include("Glouton.jl")     
 include("Exploration.jl") 
 
+##############################
+#Rajout de la fonction utilite 
+##############################
+
+function utilite_variable(C, A, j)
+    s = 0
+    @inbounds for k in 1:size(A,1)
+        s += A[k,j]
+    end
+    return s > 0 ? C[j] / s : C[j]
+end
 
 ##############################
 # Roulette biaisée
@@ -215,18 +226,17 @@ function build_solution_exploitation!(
 end
 
 
-function ACO_SPP(C, A, conf;
-                 maxIter::Int = 200,
-                 maxAnt::Int = 15,
-                 rhoE::Float64 = 0.8,
-                 phiInit::Float64 = 1.0,
-                 iterOnExploit::Float64 = 0.75,
-                 iterStagnant::Int = 8,
-                 do_local_search::Bool = true,
-                 verbose::Bool = true)
+function ACO_SPP(C, A, conf; maxIter=30, maxAnt=15, rhoE=0.8, phiInit=1.0,
+                 iterOnExploit=0.75, iterStagnant=8, do_local_search=true,
+                 verbose=true, measure_interval=10.0)
 
     n = length(C)
     pher = fill(Float64(phiInit), n)
+
+    # Historique
+    history = Vector{Tuple{Float64,Float64,Float64,Float64}}()
+    start_time = time()
+    last_measure = start_time
 
     x = zeros(Int, n)
     I = trues(n)
@@ -234,42 +244,21 @@ function ACO_SPP(C, A, conf;
     attractivites = Vector{Float64}(undef, n)
     eta = [utilite_variable(C, A, j) for j in 1:n]
 
+    vals_fourmis = Vector{Float64}(undef, maxAnt)
+
     best_global = zeros(Int, n)
     best_global_val = -Inf
     last_improvement = 0
 
-    if verbose
-        println("=======================================================")
-        println("               ACO pour SPP (version optimisée)")
-        println("=======================================================")
-        println("Variables     : $n")
-        println("Fourmis       : $maxAnt")
-        println("Itérations    : $maxIter")
-        println("(evap)     : $rhoE")
-        println("(init)     : $phiInit")
-        println("Exploitation  : toutes les $(round(Int,iterOnExploit*maxIter)) itérations")
-        println("Descente locale : $(do_local_search ? "Activée" : "Désactivée")")
-        println("-------------------------------------------------------")
-        println("Phéromones initiales : min=$(minimum(pher)), max=$(maximum(pher))")
-    end
-
     for iter in 1:maxIter
 
-        verbose && println("\n================ ITERATION $iter / $maxIter ================")
-
-        best_iter = zeros(Int, n)
         best_iter_val = -Inf
+        best_iter = zeros(Int, n)
 
         for ant in 1:maxAnt
-            exploit = (ant == 1) ||
-                      (iter % round(Int, iterOnExploit * maxIter) == 0)
 
-            if verbose
-                print("  Fourmi $ant : ")
-                println(exploit ? "EXPLÉOITATION" : "exploration")
-            end
+            exploit = (ant == 1) || (iter % round(Int, iterOnExploit * maxIter) == 0)
 
-            # Construction
             if exploit
                 build_solution_exploitation!(x, C, A, pher, conf, I)
             else
@@ -278,67 +267,42 @@ function ACO_SPP(C, A, conf;
                                             iter, maxIter)
             end
 
-            # Descente locale
             if do_local_search
-                val_before = dot(C, x)
-                x = descente_simple(x, C, A,verbose=false)
-                val_after = dot(C, x)
-                if verbose && val_after != val_before
-                    println("     Descente locale : $val_before → $val_after")
-                end
+                x = descente_simple(x, C, A, verbose=false)
             end
 
-            # Evaluation
             val = dot(C, x)
-            verbose && println("     Valeur solution = $val")
+            vals_fourmis[ant] = val
 
-            # Best iteration
             if val > best_iter_val
                 best_iter_val = val
-                @inbounds best_iter .= x
+                best_iter .= x
             end
-
-            # Best global
             if val > best_global_val
                 best_global_val = val
-                @inbounds best_global .= x
+                best_global .= x
                 last_improvement = iter
-                verbose && println("     >>> Nouvelle meilleure globale = $val")
             end
         end
 
-        verbose && println("  → Best iteration $iter = $best_iter_val")
-
-        # Mise à jour phéromones
+        # --- Mise à jour phéromones ---
         rhoD = phiInit * (1 - rhoE)
         update_pheromones!(pher, best_iter, rhoE, rhoD)
 
-        verbose && println("  Phéromones : min=$(minimum(pher)), max=$(maximum(pher))")
+        # --- Mesure périodique ---
+        current_time = time()
+        if current_time - last_measure ≥ measure_interval
+            zmin = minimum(vals_fourmis)
+            zmax = maximum(vals_fourmis)
+            zmoy = mean(vals_fourmis)
 
-        # Perturbation 
-        stagnant = (iter - last_improvement >= iterStagnant)
-        exists_zero = any(p -> p < 0.001, pher)
-        enough_time = iter < 0.9 * maxIter
-
-        if stagnant && exists_zero && enough_time
-            verbose && println("  *** Perturbation activée (stagnation détectée) ***")
-            pher_before_min = minimum(pher)
-            pher_before_max = maximum(pher)
-
-            disturb_pheromones!(pher, iter, maxIter)
-
-            verbose && println("  Phéromones avant : min=$pher_before_min, max=$pher_before_max")
-            verbose && println("  Phéromones après : min=$(minimum(pher)), max=$(maximum(pher))")
+            push!(history, (current_time - start_time, zmin, zmax, zmoy))
+            last_measure = current_time
         end
     end
 
-    verbose && println("\n====================== FIN ACO ======================")
-    verbose && println("Meilleure valeur globale = $best_global_val")
-    verbose && println("======================================================")
-
-    return best_global, best_global_val
+    return best_global, best_global_val, history
 end
-
 
 
 #= C, A = loadSPP("../dat/pb_2000rnd0100.dat")
@@ -383,8 +347,8 @@ function experimentation_ACO(dir::String)
 
             @elapsed best_sol, best_val = ACO_SPP(
                 C, A, conf;
-                maxIter = 30,
-                maxAnt = 15,
+                maxIter = 50,
+                maxAnt = 25,
                 rhoE = 0.8,
                 phiInit = 1.0,
                 iterOnExploit = 0.75,
@@ -407,4 +371,3 @@ function experimentation_ACO(dir::String)
     println("===================================================")
 end
 
-experimentation_ACO("../dat/")

@@ -2,7 +2,7 @@ using LinearAlgebra
 
 # ---- Construction Gloutonne pour SPP ----
 
-function construction_gloutonne(C, A; verbose=true)
+function construction_gloutonne(C, A; verbose=false)
     m, n = size(A)
     x = zeros(Int, n)        
     variables_restantes = collect(1:n)

@@ -99,7 +99,7 @@ function recherche_locale(x, C, A; max_iter=100, verbose=false)
     return x_improved
 end
 
-function grasp_complet(C, A; alpha=0.7, n_iter=100, verbose=true)
+function grasp_complet(C, A; alpha=0.7, n_iter=100, verbose=false)
    
     if verbose
         println("\n============ Résolution SPP avec GRASP  =========")
@@ -302,7 +302,7 @@ end
 
 # ==================== INTERFACE UTILISATEUR ====================
 
-function resoudreSPP_GRASP(fname; methode="grasp", alpha=0.7, n_iter=100, alphas=[0.2, 0.5, 0.75, 0.9, 1.0])
+function resoudreSPP_GRASP(fname; methode="grasp", alpha=0.7, n_iter=100, alphas=[0.2, 0.5, 0.75, 0.9, 1.0],verbose=false)
     """
     Fonction principale pour résoudre SPP avec GRASP
     """

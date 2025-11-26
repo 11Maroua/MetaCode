@@ -31,7 +31,7 @@ end
 
 # ==================== DESCENTE PROFONDE ====================
 
-function descente_profonde(x_initial, C, A; max_iter=1000, verbose=true)
+function descente_profonde(x_initial, C, A; max_iter=1000, verbose=false)
    
     if verbose
         println("\n=== DESCENTE PROFONDE ===")

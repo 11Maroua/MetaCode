@@ -166,7 +166,8 @@ function algorithme_genetique_simple(C::Vector{Int}, A::Matrix{Int};
                                      generations=300,
                                      prob_croisement=0.85,
                                      prob_mutation=0.02,
-                                     freq_recherche_locale=50)
+                                     freq_recherche_locale=50,
+                                     verbose=false)
    
     n = length(C)
     
