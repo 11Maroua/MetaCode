@@ -208,14 +208,10 @@ Le Reactive GRASP égale ou dépasse le GRASP standard sur la majorité des inst
 - **GRASP** reste un compromis solide : qualité en 2e position, temps raisonnables, simple à implémenter et à paramétrer.
 - **L'AG** est le plus robuste d'exécution en exécution (écart-type le plus faible, plusieurs instances à variance nulle) et reste compétitif sur les petites instances, mais son temps de calcul explose sur les grandes instances : 92.2 s sur `pb_1000rnd0100.dat` contre 0.41 s pour ACO (×224), et 395.8 s sur `pb_2000rnd0100.dat` contre 1.37 s pour ACO (×289). La population de 80 individus sur 2000 bits, combinée à la réparation systématique après chaque croisement/mutation, en est la cause principale.
 
-> Note d'implémentation : `experimentationSPP_EI3()` (dans `src/experiments.jl`) reconstitue cette campagne : elle relance GRASP, ACO et l'AG (5 runs chacun) sur les 10 instances, régénère `res/tableau_EI3.tex` ainsi que `res/graphiques_EI3_synthese.pdf` (qualité, temps, robustesse, efficacité) et `res/graphiques_EI3_convergence.pdf` (courbes de convergence sur `pb_200rnd0300.dat`). Compte tenu des temps d'exécution de l'AG sur les grandes instances (plusieurs minutes chacun), l'exécution complète prend un certain temps, à lancer avec une bonne tasse de café.
-
 ## Auteurs
 
 Projet réalisé par **NAIT SLIMANI Maroua**, **MOLLI Lila** et **ABID Ikram** dans le cadre du cours de Métaheuristiques.
 
-`loadSPP.jl`, `setSPP.jl`, `getfname.jl` et la structure initiale de `main.jl` sont fournis par l'enseignant (Xavier Gandibleux) comme socle de départ du projet, voir `LICENSE`.
-
 ---
 
-📄 Rapport complet : [`doc/rapport.tex`](doc/rapport.tex)
+📄 Rapport complet : [`doc/Rapport.pdf`](doc/Rapport.pdf)
