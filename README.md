@@ -1,4 +1,4 @@
-# MetaCode — Métaheuristiques pour le Set Packing Problem
+# MetaCode : Métaheuristiques pour le Set Packing Problem
 
 ![Julia](https://img.shields.io/badge/Julia-1.x-9558B2?logo=julia&logoColor=white)
 ![License](https://img.shields.io/badge/license-MIT-blue)
@@ -6,7 +6,7 @@
 
 Implémentation et comparaison de plusieurs métaheuristiques appliquées au **Set Packing Problem (SPP)**.
 
-> Heuristique gloutonne → recherche locale → GRASP / Reactive GRASP → Algorithme Génétique → Colonies de fourmis (ACO), comparés sur 10 instances allant de 9 à 2000 variables, avec la solution exacte (GLPK) comme référence quand elle est atteignable.
+> Heuristique gloutonne, recherche locale, GRASP / Reactive GRASP, Algorithme Génétique, Colonies de fourmis (ACO), comparés sur 10 instances allant de 9 à 2000 variables, avec la solution exacte (GLPK) comme référence quand elle est atteignable.
 
 ---
 
@@ -42,7 +42,7 @@ Les instances sont au format OR-Library (`dat/`), de la petite instance didactiq
 | EI2 | **Reactive GRASP** | `src/Grasp.jl` | Apprentissage en ligne du paramètre α de la RCL, par probabilités mises à jour selon la qualité moyenne obtenue |
 | EI3 | **Algorithme Génétique** | `src/AG.jl` | Population + sélection par tournoi, croisement 2 points, mutation, réparation des solutions infaisables, hybridation mémétique (recherche locale périodique) |
 | EI3 | **ACO (colonies de fourmis)** | `src/ACO.jl` | Construction guidée par phéromones + heuristique locale, alternance exploration/exploitation, perturbation anti-stagnation |
-| — | **Référence exacte** | `src/setSPP.jl`, `src/main.jl` | Modèle `JuMP` résolu par `GLPK` (solveur MILP exact, utilisé comme borne de comparaison sur les instances de taille raisonnable) |
+| -- | **Référence exacte** | `src/setSPP.jl`, `src/main.jl` | Modèle `JuMP` résolu par `GLPK` (solveur MILP exact, utilisé comme borne de comparaison sur les instances de taille raisonnable) |
 
 Toutes les métaheuristiques réutilisent le même noyau de faisabilité (`peut_ajouter`, dans `Glouton.jl`) pour vérifier qu'une variable peut être ajoutée sans créer de conflit.
 
@@ -56,12 +56,18 @@ $$p_k = \frac{q_k}{\sum_i q_i}, \qquad q_k = \frac{\bar z_k - z_{\text{worst}}}{
 
 Chaque valeur d'α reçoit une probabilité de sélection proportionnelle à la qualité moyenne des solutions qu'elle a produites.
 
+### Phéromones de l'ACO
+
+$$\tau_j \leftarrow \tau_j \cdot \rho_E + \rho_D \cdot [\, j \in \text{best\_iter} \,]$$
+
+Évaporation globale puis dépôt sur la meilleure solution de l'itération, avec une perturbation anti-stagnation quand aucune amélioration globale n'a été trouvée depuis plusieurs itérations.
+
 ## Structure du dépôt
 
 ```
 MetaCode/
 ├── src/
-│   ├── loadSPP.jl        # lecture des instances 
+│   ├── loadSPP.jl        # lecture des instances
 │   ├── setSPP.jl         # modèle JuMP exact du SPP
 │   ├── getfname.jl       # utilitaire de listing de fichiers
 │   ├── main.jl           # démo minimale : chargement + résolution exacte
@@ -71,8 +77,9 @@ MetaCode/
 │   ├── AG.jl             # EI3 : algorithme génétique
 │   ├── ACO.jl            # EI3 : colonies de fourmis
 │   └── experiments.jl    # scripts d'expérimentation complets (EI1 + EI2), génère res/
-├── dat/                  # 10 instances SPP 
+├── dat/                  # 10 instances SPP
 ├── res/                  # tableaux LaTeX et graphiques générés par experiments.jl
+│   └── img/               # versions PNG des graphiques (pour ce README)
 ├── doc/
 │   └── rapport.tex       # rapport complet du projet
 ├── Project.toml          # dépendances Julia
@@ -121,34 +128,60 @@ conf = precompute_conflicts(A)
 best_sol, best_val = ACO_SPP(C, A, conf; maxIter=200, maxAnt=15)
 ```
 
+```julia
+include("src/AG.jl")
+solution, fitness = algorithme_genetique_simple(C, A, taille_pop=100, generations=300)
+```
+
 ## Résultats
 
-### EI1 — Glouton + recherche locale (extrait)
+### EI1 : Glouton + recherche locale
 
-| Instance | m | n | Z* (GLPK) | Z glouton | Gap | Z + recherche locale | Gap | Speedup vs GLPK |
-|---|---|---|---|---|---|---|---|---|
-| `pb_100rnd0100.dat` | 500 | 100 | 372 | 342 | 8.06% | 348 | 6.45% | **×56.7** |
-| `pb_500rnd0300.dat` | 2500 | 500 | — | 674 | — | 674 | — | — |
-| `pb_2000rnd0100.dat` | 10000 | 2000 | — (intraitable) | 37 | — | 37 | — | — |
+| Instance | m | n | Z* (GLPK) | T* (s) | Statut | Z glouton | T (s) | Gap % | Z + recherche locale | T (s) | Gap % | Speedup |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| `didactic.dat` | 7 | 9 | -- | -- | N/A | 30 | 0.0 | -- | 30 | 0.0 | -- | -- |
+| `pb_100rnd0100.dat` | 500 | 100 | 372 | 0.64 | OPTIMAL | 342 | 0.0022 | 8.06 | 348 | 0.0114 | 6.45 | **×56.7** |
+| `pb_100rnd0300.dat` | 500 | 100 | -- | -- | N/A | 193 | 0.0015 | -- | 194 | 0.0035 | -- | -- |
+| `pb_200rnd0100.dat` | 1000 | 200 | -- | -- | N/A | 351 | 0.0083 | -- | 359 | 0.0251 | -- | -- |
+| `pb_200rnd0300.dat` | 1000 | 200 | -- | -- | N/A | 682 | 0.0192 | -- | 688 | 0.1595 | -- | -- |
+| `pb_500rnd1500.dat` | 1500 | 500 | -- | -- | N/A | 1059 | 0.1007 | -- | 1086 | 0.2073 | -- | -- |
+| `pb_500rnd0100.dat` | 2500 | 500 | -- | -- | N/A | 285 | 0.0375 | -- | 285 | 0.0466 | -- | -- |
+| `pb_500rnd0300.dat` | 2500 | 500 | -- | -- | N/A | 674 | 0.1939 | -- | 674 | 0.2291 | -- | -- |
+| `pb_1000rnd0100.dat` | 5000 | 1000 | -- | -- | N/A | 49 | 0.0847 | -- | 49 | 0.0865 | -- | -- |
+| `pb_2000rnd0100.dat` | 10000 | 2000 | -- | -- | N/A | 37 | 0.5496 | -- | 37 | 0.5572 | -- | -- |
 
-Sur la seule instance résolue à l'optimum exact, la recherche locale ramène le gap de 8% à 6.5% pour un temps de calcul environ **56 fois inférieur** à GLPK. Sur les grandes instances, GLPK devient intraitable — seules les heuristiques passent à l'échelle.
+Sur la seule instance résolue à l'optimum exact, la recherche locale ramène le gap de 8.06% à 6.45%, pour un temps de calcul environ **56 fois inférieur** à GLPK. Sur les instances plus grandes, GLPK n'a même pas été lancé (temps de résolution prohibitif) : seules les heuristiques passent à l'échelle.
 
-### EI2 — GRASP vs Reactive GRASP (5 runs, extrait)
+![Résultats EI1](res/img/graphiques_EI1.png)
 
-| Instance | GRASP (Z moyen) | Reactive GRASP (Z moyen) |
-|---|---|---|
-| `pb_100rnd0100.dat` | 367.6 | 367.2 |
-| `pb_200rnd0100.dat` | 399.8 | 394.6 |
-| `pb_500rnd0100.dat` | 294.8 | 293.4 |
-| `pb_1000rnd0100.dat` | 60.6 | **57.0** |
+### EI2 : GRASP vs Reactive GRASP (5 runs)
 
-Les tableaux et graphiques complets (`res/tableau_EI1.tex`, `res/tableau_EI2.tex`, `res/graphiques_EI1.pdf`, `res/graphiques_EI2.pdf`) sont générés automatiquement par `src/experiments.jl` et intégrés dans `doc/rapport.tex`.
+| Instance | m | n | GRASP Z min | GRASP Z max | GRASP Z moy | GRASP T (s) | Reactive Z min | Reactive Z max | Reactive Z moy | Reactive T (s) |
+|---|---|---|---|---|---|---|---|---|---|---|
+| `didactic.dat` | 7 | 9 | 30 | 30 | 30.0 | 0.0 | 30 | 30 | 30.0 | 0.0 |
+| `pb_100rnd0100.dat` | 500 | 100 | 366 | 368 | 367.6 | 0.39 | 365 | 370 | 367.2 | 0.38 |
+| `pb_100rnd0300.dat` | 500 | 100 | 195 | 203 | 196.6 | 0.24 | 195 | 203 | 196.6 | 0.23 |
+| `pb_200rnd0100.dat` | 1000 | 200 | 399 | 403 | 399.8 | 1.09 | 387 | 403 | 394.6 | 1.09 |
+| `pb_200rnd0300.dat` | 1000 | 200 | 693 | 703 | 698.6 | 2.12 | 689 | 699 | 694.8 | 2.09 |
+| `pb_500rnd0100.dat` | 2500 | 500 | 289 | 300 | 294.8 | 4.03 | 285 | 305 | 293.4 | 3.91 |
+| `pb_500rnd0300.dat` | 2500 | 500 | 681 | 714 | 696.4 | 9.23 | 711 | 739 | 723.2 | 9.16 |
+| `pb_500rnd1500.dat` | 1500 | 500 | 1077 | 1111 | 1088.8 | 10.5 | 1097 | 1113 | 1103.6 | 10.31 |
+| `pb_1000rnd0100.dat` | 5000 | 1000 | 54 | 67 | 60.6 | 7.58 | 54 | 59 | **57.0** | 7.86 |
+| `pb_2000rnd0100.dat` | 10000 | 2000 | 39 | 40 | 39.6 | 41.37 | 37 | 40 | 38.8 | 43.12 |
+
+Le Reactive GRASP égale ou dépasse le GRASP standard sur la majorité des instances (notamment `pb_1000rnd0100.dat` et `pb_200rnd0100.dat`), pour un coût en temps quasi identique : l'apprentissage en ligne du paramètre α ne coûte quasiment rien et paie souvent.
+
+![Résultats EI2](res/img/graphiques_EI2.png)
+
+### EI3 : ACO vs Algorithme Génétique
+
+`ACO.jl` et `AG.jl` sont pleinement implémentés (voir la section [Méthodes implémentées](#méthodes-implémentées) et [Utilisation](#utilisation)), mais la campagne d'expérimentation comparative EI3 n'a pas encore été formalisée en tableau/graphique dans `res/` au moment de la rédaction de ce README. Cette section sera complétée avec les mêmes métriques (Z, temps, gap) que EI1/EI2 dès que les runs seront disponibles.
 
 ## Auteurs
 
 Projet réalisé par **NAIT SLIMANI Maroua**, **MOLLI Lila** et **ABID Ikram** dans le cadre du cours de Métaheuristiques.
 
-`loadSPP.jl`, `setSPP.jl`, `getfname.jl` et la structure initiale de `main.jl` sont fournis par l'enseignant (Xavier Gandibleux) comme socle de départ du projet voir `LICENSE`.
+`loadSPP.jl`, `setSPP.jl`, `getfname.jl` et la structure initiale de `main.jl` sont fournis par l'enseignant (Xavier Gandibleux) comme socle de départ du projet, voir `LICENSE`.
 
 ---
 
