@@ -173,9 +173,39 @@ Le Reactive GRASP égale ou dépasse le GRASP standard sur la majorité des inst
 
 ![Résultats EI2](res/img/graphiques_EI2.png)
 
-### EI3 : ACO vs Algorithme Génétique
+### EI3 : GRASP vs ACO vs Algorithme Génétique (5 runs)
 
-`ACO.jl` et `AG.jl` sont pleinement implémentés (voir la section [Méthodes implémentées](#méthodes-implémentées) et [Utilisation](#utilisation)), mais la campagne d'expérimentation comparative EI3 n'a pas encore été formalisée en tableau/graphique dans `res/` au moment de la rédaction de ce README. Cette section sera complétée avec les mêmes métriques (Z, temps, gap) que EI1/EI2 dès que les runs seront disponibles.
+| Instance | m | n | GRASP Z moy | GRASP σ | GRASP T (s) | ACO Z moy | ACO σ | ACO T (s) | AG Z moy | AG σ |
+|---|---|---|---|---|---|---|---|---|---|---|
+| `didactic.dat` | 7 | 9 | 30.0 | 0.0 | 0.00 | 30.0 | 0.0 | 0.00 | 30.0 | 0.0 |
+| `pb_100rnd0100.dat` | 500 | 100 | 367.6 | 0.9 | 0.22 | **372.0** | 0.0 | 0.12 | 349.0 | 1.9 |
+| `pb_100rnd0300.dat` | 500 | 100 | 196.6 | 3.6 | 0.15 | **203.0** | 0.0 | 0.09 | 194.0 | 0.0 |
+| `pb_200rnd0100.dat` | 1000 | 200 | 399.8 | 1.8 | 0.89 | **404.2** | 9.1 | 0.25 | 354.0 | 3.7 |
+| `pb_200rnd0300.dat` | 1000 | 200 | 698.6 | 4.4 | 1.68 | **707.8** | 7.5 | 0.63 | 686.2 | 2.5 |
+| `pb_500rnd0100.dat` | 2500 | 500 | 294.8 | 5.0 | 4.42 | **307.2** | 2.8 | 0.59 | 285.0 | 0.0 |
+| `pb_500rnd0300.dat` | 2500 | 500 | 696.4 | 11.7 | 9.68 | **741.0** | 8.6 | 1.30 | 674.0 | 0.0 |
+| `pb_500rnd1500.dat` | 1500 | 500 | 1088.8 | 13.0 | 10.19 | **1132.4** | 23.6 | 1.34 | 1069.4 | 10.3 |
+| `pb_1000rnd0100.dat` | 5000 | 1000 | 60.6 | 6.1 | 10.05 | 61.6 | 5.1 | 0.41 | 49.2 | 0.4 |
+| `pb_2000rnd0100.dat` | 10000 | 2000 | 39.6 | 0.5 | 61.09 | 39.4 | 0.9 | 1.37 | **40.0** | 0.0 |
+
+**Protocole :** 5 runs indépendants par algorithme et par instance. GRASP (α = 0.7, 100 itérations), ACO (15 fourmis, ρ = 0.8, 30 itérations, recherche locale intégrée), AG (population 80, 250 générations, croisement 0.9, mutation 0.02).
+
+**Synthèse globale :**
+
+| Métrique | GRASP | ACO | AG |
+|---|---|---|---|
+| Victoires (Z moy max, sur 10) | 1 | **8** | 1 |
+| Temps moyen (s) | 19.94 | **0.71** | 57.47 |
+| Écart-type moyen | 4.60 | 5.76 | **2.30** |
+| Efficacité moyenne (Z/temps) | 18 536 | **98 654** | 2 947 |
+
+**Ce que ça donne concrètement :**
+
+- **ACO domine sur la qualité** (8 victoires sur 10) et sur la vitesse : temps quasi constant même sur `pb_2000rnd0100.dat` (n=2000), et converge vers une bonne solution en une poignée d'itérations grâce à la recherche locale intégrée à chaque construction.
+- **GRASP** reste un compromis solide : qualité en 2e position, temps raisonnables, simple à implémenter et à paramétrer.
+- **L'AG** est le plus robuste d'exécution en exécution (écart-type le plus faible, plusieurs instances à variance nulle) et reste compétitif sur les petites instances, mais son temps de calcul explose sur les grandes instances : 92.2 s sur `pb_1000rnd0100.dat` contre 0.41 s pour ACO (×224), et 395.8 s sur `pb_2000rnd0100.dat` contre 1.37 s pour ACO (×289). La population de 80 individus sur 2000 bits, combinée à la réparation systématique après chaque croisement/mutation, en est la cause principale.
+
+> Note d'implémentation : `ACO.jl` (`experimentation_ACO`) et `AG.jl` (`tester_AG`) permettent de relancer ces algorithmes séparément, mais le script unifié `experimentationSPP_EI3()` qui a produit ce tableau et les 5 graphiques comparatifs du rapport n'est pas (encore) présent dans `src/experiments.jl`. À reconstituer si tu veux pouvoir régénérer ces résultats depuis le repo.
 
 ## Auteurs
 
