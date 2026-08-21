@@ -208,10 +208,34 @@ Le Reactive GRASP égale ou dépasse le GRASP standard sur la majorité des inst
 - **GRASP** reste un compromis solide : qualité en 2e position, temps raisonnables, simple à implémenter et à paramétrer.
 - **L'AG** est le plus robuste d'exécution en exécution (écart-type le plus faible, plusieurs instances à variance nulle) et reste compétitif sur les petites instances, mais son temps de calcul explose sur les grandes instances : 92.2 s sur `pb_1000rnd0100.dat` contre 0.41 s pour ACO (×224), et 395.8 s sur `pb_2000rnd0100.dat` contre 1.37 s pour ACO (×289). La population de 80 individus sur 2000 bits, combinée à la réparation systématique après chaque croisement/mutation, en est la cause principale.
 
+![Comparaison qualité moyenne](res/img/graphique_EI3_1_qualite.png)
+
+ACO obtient la meilleure solution moyenne sur 8 instances sur 10. L'écart avec GRASP est particulièrement marqué sur les instances de densité moyenne à élevée (`pb_500rnd0300.dat` : +44.6 points, `pb_500rnd1500.dat` : +43.6 points). Sur `pb_100rnd0100.dat`, ACO atteint Z=372.0 (l'optimum exact, de façon stable), contre 367.6 pour GRASP et seulement 349.0 pour l'AG.
+
+![Comparaison temps d'exécution](res/img/graphique_EI3_2_temps.png)
+
+Le graphique révèle le vrai problème de l'AG : l'explosion du temps de calcul sur les grandes instances, pendant qu'ACO et GRASP restent dans des temps raisonnables.
+
+![Robustesse (écart-type)](res/img/graphique_EI3_3_robustesse.png)
+
+Contre-intuitivement, c'est l'AG qui est le plus stable d'une exécution à l'autre (écart-type quasi nul sur plusieurs instances), tandis qu'ACO présente la plus grande variabilité (pic à 23.6 sur `pb_500rnd1500.dat`) : sa recherche locale intensive à chaque itération produit des solutions de haute qualité mais moins reproductibles.
+
+![Efficacité (ratio qualité/temps)](res/img/graphique_EI3_4_efficacite.png)
+
+En combinant qualité et rapidité, ACO écrase la concurrence sur toutes les instances : efficacité moyenne globale de 98 654, contre 18 536 pour GRASP et 2 947 pour l'AG.
+
+![Courbes de convergence sur pb_200rnd0300.dat](res/img/graphique_EI3_5_convergence.png)
+
+Sur cette instance, ACO atteint une meilleure solution en moins de 5 itérations que GRASP en 100 itérations et l'AG en 250 générations : sa construction guidée par phéromones, combinée à la recherche locale à chaque fourmi, converge extrêmement vite. L'AG, à l'inverse, stagne près de 110 générations avant de progresser à peine.
+
+> Note d'implémentation : `experimentationSPP_EI3()` (dans `src/experiments.jl`) reconstitue le calcul de ces résultats : elle relance GRASP, ACO et l'AG (5 runs chacun) sur les 10 instances et régénère `res/tableau_EI3.tex` ainsi que les graphiques ci-dessus (nouvelle exécution, donc valeurs sujettes à variation liée à l'aléatoire). Les images de cette section proviennent directement des figures 9 à 13 de `doc/rapport.tex`. Compte tenu des temps d'exécution de l'AG sur les grandes instances (plusieurs minutes chacun), relancer l'ensemble prend un certain temps.
+
 ## Auteurs
 
 Projet réalisé par **NAIT SLIMANI Maroua**, **MOLLI Lila** et **ABID Ikram** dans le cadre du cours de Métaheuristiques.
 
+`loadSPP.jl`, `setSPP.jl`, `getfname.jl` et la structure initiale de `main.jl` sont fournis par l'enseignant (Xavier Gandibleux) comme socle de départ du projet, voir `LICENSE`.
+
 ---
 
-📄 Rapport complet : [`doc/Rapport.pdf`](doc/Rapport.pdf)
+📄 Rapport complet : [`doc/rapport.tex`](doc/rapport.tex)
