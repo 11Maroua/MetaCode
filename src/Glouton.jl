@@ -63,16 +63,20 @@ function construction_gloutonne(C, A; verbose=true)
     return x
 end
 
+"""
+    peut_ajouter(x, A, j_new)
+
+Teste si la variable `j_new` peut être ajoutée à la solution partielle `x`
+sans violer de contrainte (i.e. sans entrer en conflit avec une variable
+déjà sélectionnée). Fonction partagée par tous les algorithmes du projet
+(glouton, recherche locale, GRASP).
+"""
 function peut_ajouter(x, A, j_new)
-   
-    m, n = size(A)
-    
-    for i in 1:m
+    for i in 1:size(A, 1)
         if A[i, j_new] == 1
-            # Vérifier si une variable déjà sélectionnée couvre cette contrainte
-            for k in 1:n
-                if x[k] == 1 && A[i, k] == 1
-                    return false  # Conflit détecté
+            for k in findall(x .== 1)  # ne parcourt que les variables actives
+                if A[i, k] == 1
+                    return false  # conflit détecté
                 end
             end
         end

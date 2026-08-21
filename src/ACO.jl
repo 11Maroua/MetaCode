@@ -407,4 +407,6 @@ function experimentation_ACO(dir::String)
     println("===================================================")
 end
 
-experimentation_ACO("../dat/")
+if abspath(PROGRAM_FILE) == @__FILE__
+    experimentation_ACO("../dat/")
+end

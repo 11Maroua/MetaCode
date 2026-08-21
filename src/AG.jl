@@ -41,8 +41,10 @@ function reparer_solution(x::Vector{Int}, C::Vector{Int}, A::Matrix{Int})
     return x_repare
 end
 
-# Recherche locale comme mecanisme de mutation
-function recherche_locale(x::Vector{Int}, C::Vector{Int}, A::Matrix{Int})
+# Recherche locale comme mecanisme de mutation (mémétique).
+# Nommée _AG pour ne pas entrer en conflit avec recherche_locale() de Grasp.jl,
+# qui a une signature et un comportement différents (retourne juste x, pas (x, fitness)).
+function recherche_locale_AG(x::Vector{Int}, C::Vector{Int}, A::Matrix{Int})
     meilleure_sol = copy(x)
     meilleure_fitness = evaluer_fitness(x, C, A)
     n = length(x)
@@ -226,7 +228,7 @@ function algorithme_genetique_simple(C::Vector{Int}, A::Matrix{Int};
 
         if gen % freq_recherche_locale == 0
             best_idx = argmax(fitness_pop)
-            sol_amelioree, fit_amelioree = recherche_locale(population[best_idx], C, A)
+            sol_amelioree, fit_amelioree = recherche_locale_AG(population[best_idx], C, A)
             if fit_amelioree > fitness_pop[best_idx]
                 population[best_idx] = sol_amelioree
                 fitness_pop[best_idx] = fit_amelioree

@@ -4,21 +4,6 @@ include("loadSPP.jl")
 include("Glouton.jl")
 
 
-function peut_ajouter(x, A, j_new)
-    
-    for i in 1:size(A, 1)
-        if A[i, j_new] == 1
-            # Chercher un conflit avec les variables déjà sélectionnées
-            for k in findall(x .== 1)  # Itérer seulement sur les variables actives
-                if A[i, k] == 1
-                    return false  # Conflit détecté
-                end
-            end
-        end
-    end
-    return true
-end
-
 function conflit(A, j, k)
    
     for i in 1:size(A, 1)
