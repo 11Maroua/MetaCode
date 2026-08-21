@@ -4,7 +4,7 @@
 ![License](https://img.shields.io/badge/license-MIT-blue)
 ![Status](https://img.shields.io/badge/status-projet%20académique-informational)
 
-Implémentation et comparaison de plusieurs métaheuristiques appliquées au **Set Packing Problem (SPP)**, dans le cadre du cours de Métaheuristiques du Master Informatique — Nantes Université (2025-2026).
+Implémentation et comparaison de plusieurs métaheuristiques appliquées au **Set Packing Problem (SPP)**.
 
 > Heuristique gloutonne → recherche locale → GRASP / Reactive GRASP → Algorithme Génétique → Colonies de fourmis (ACO), comparés sur 10 instances allant de 9 à 2000 variables, avec la solution exacte (GLPK) comme référence quand elle est atteignable.
 
@@ -44,7 +44,7 @@ Les instances sont au format OR-Library (`dat/`), de la petite instance didactiq
 | EI3 | **ACO (colonies de fourmis)** | `src/ACO.jl` | Construction guidée par phéromones + heuristique locale, alternance exploration/exploitation, perturbation anti-stagnation |
 | — | **Référence exacte** | `src/setSPP.jl`, `src/main.jl` | Modèle `JuMP` résolu par `GLPK` (solveur MILP exact, utilisé comme borne de comparaison sur les instances de taille raisonnable) |
 
-Toutes les métaheuristiques réutilisent le même noyau de faisabilité (`peut_ajouter`, dans `Glouton.jl`) pour vérifier qu'une variable peut être ajoutée sans créer de conflit — un seul point de vérité pour cette logique dans tout le projet.
+Toutes les métaheuristiques réutilisent le même noyau de faisabilité (`peut_ajouter`, dans `Glouton.jl`) pour vérifier qu'une variable peut être ajoutée sans créer de conflit.
 
 ### RCL du GRASP
 
@@ -54,14 +54,14 @@ $$\text{RCL} = \{ j : u_j \geq u_{\min} + \alpha (u_{\max} - u_{\min}) \}$$
 
 $$p_k = \frac{q_k}{\sum_i q_i}, \qquad q_k = \frac{\bar z_k - z_{\text{worst}}}{z_{\text{best}} - z_{\text{worst}}}$$
 
-Chaque valeur d'α reçoit une probabilité de sélection proportionnelle à la qualité moyenne des solutions qu'elle a produites — une forme simple d'apprentissage par renforcement pour piloter la métaheuristique elle-même.
+Chaque valeur d'α reçoit une probabilité de sélection proportionnelle à la qualité moyenne des solutions qu'elle a produites.
 
 ## Structure du dépôt
 
 ```
 MetaCode/
 ├── src/
-│   ├── loadSPP.jl        # lecture des instances (format OR-Library)
+│   ├── loadSPP.jl        # lecture des instances 
 │   ├── setSPP.jl         # modèle JuMP exact du SPP
 │   ├── getfname.jl       # utilitaire de listing de fichiers
 │   ├── main.jl           # démo minimale : chargement + résolution exacte
@@ -71,7 +71,7 @@ MetaCode/
 │   ├── AG.jl             # EI3 : algorithme génétique
 │   ├── ACO.jl            # EI3 : colonies de fourmis
 │   └── experiments.jl    # scripts d'expérimentation complets (EI1 + EI2), génère res/
-├── dat/                  # 10 instances SPP (format OR-Library)
+├── dat/                  # 10 instances SPP 
 ├── res/                  # tableaux LaTeX et graphiques générés par experiments.jl
 ├── doc/
 │   └── rapport.tex       # rapport complet du projet
@@ -146,9 +146,9 @@ Les tableaux et graphiques complets (`res/tableau_EI1.tex`, `res/tableau_EI2.tex
 
 ## Auteurs
 
-Projet réalisé par **NAIT SLIMANI Maroua**, **MOLLI Lila** et **ABID Ikram** — Master Informatique, Nantes Université (2025-2026), dans le cadre du cours de Métaheuristiques.
+Projet réalisé par **NAIT SLIMANI Maroua**, **MOLLI Lila** et **ABID Ikram** dans le cadre du cours de Métaheuristiques.
 
-`loadSPP.jl`, `setSPP.jl`, `getfname.jl` et la structure initiale de `main.jl` sont fournis par l'enseignant (Xavier Gandibleux) comme socle de départ du projet — voir `LICENSE`.
+`loadSPP.jl`, `setSPP.jl`, `getfname.jl` et la structure initiale de `main.jl` sont fournis par l'enseignant (Xavier Gandibleux) comme socle de départ du projet voir `LICENSE`.
 
 ---
 
