@@ -1,8 +1,5 @@
 # MetaCode : Métaheuristiques pour le Set Packing Problem
 
-![Julia](https://img.shields.io/badge/Julia-1.x-9558B2?logo=julia&logoColor=white)
-![License](https://img.shields.io/badge/license-MIT-blue)
-![Status](https://img.shields.io/badge/status-projet%20académique-informational)
 
 Implémentation et comparaison de plusieurs métaheuristiques appliquées au **Set Packing Problem (SPP)**.
 
@@ -218,8 +215,6 @@ Sur `pb_100rnd0100.dat`, ACO atteint Z=372.0 (l'optimum exact, de façon stable)
 
 Projet réalisé par **NAIT SLIMANI Maroua**, **MOLLI Lila** et **ABID Ikram** dans le cadre du cours de Métaheuristiques.
 
-`loadSPP.jl`, `setSPP.jl`, `getfname.jl` et la structure initiale de `main.jl` sont fournis par l'enseignant (Xavier Gandibleux) comme socle de départ du projet, voir `LICENSE`.
-
 ---
 
-📄 Rapport complet : [`doc/rapport.tex`](doc/rapport.tex)
+📄 Rapport complet : [`doc/Rapport.pdf`](doc/Rapport.pdf)
