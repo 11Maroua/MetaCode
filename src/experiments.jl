@@ -17,6 +17,8 @@ include("setSPP.jl")
 include("Glouton.jl")
 include("Exploration.jl")
 include("Grasp.jl")
+include("ACO.jl")
+include("AG.jl")
 
 
 # ==============================================================================
@@ -516,6 +518,242 @@ end
 
 
 # ==============================================================================
+# EI3 : GRASP vs ACO vs ALGORITHME GÉNÉTIQUE ("battle of metaheuristics")
+# ==============================================================================
+
+"""
+Expérimentation EI3 : compare GRASP, ACO et l'Algorithme Génétique sur les 10
+instances, avec `n_runs` exécutions indépendantes par algorithme et par instance.
+Reproduit le tableau 3 et les graphiques du rapport (qualité, temps, robustesse,
+efficacité, convergence).
+"""
+function experimentationSPP_EI3(; n_runs=5,
+                                   grasp_alpha=0.7, grasp_iter=100,
+                                   aco_maxIter=30, aco_maxAnt=15, aco_rhoE=0.8,
+                                   ag_pop=80, ag_gen=250, ag_croisement=0.9, ag_mutation=0.02,
+                                   instance_convergence="dat/pb_200rnd0300.dat")
+    println("\n" * "="^80)
+    println("EXPÉRIMENTATION EI3 : GRASP vs ACO vs ALGORITHME GÉNÉTIQUE")
+    println("Paramètres: $n_runs runs | GRASP α=$grasp_alpha,$grasp_iter iter | ",
+            "ACO $aco_maxAnt fourmis,$aco_maxIter iter | AG pop=$ag_pop,$ag_gen gén.")
+    println("="^80)
+
+    instances = [
+        "dat/didactic.dat",
+        "dat/pb_100rnd0100.dat",
+        "dat/pb_100rnd0300.dat",
+        "dat/pb_200rnd0100.dat",
+        "dat/pb_200rnd0300.dat",
+        "dat/pb_500rnd1500.dat",
+        "dat/pb_500rnd0100.dat",
+        "dat/pb_500rnd0300.dat",
+        "dat/pb_1000rnd0100.dat",
+        "dat/pb_2000rnd0100.dat"
+    ]
+
+    resultats = []
+
+    for (idx, inst) in enumerate(instances)
+        println("\n[$idx/$(length(instances))] Instance: ", basename(inst))
+
+        C, A = loadSPP(inst)
+        m, n = size(A)
+        conf = precompute_conflicts(A)
+
+        # ---- GRASP ----
+        z_grasp, t_grasp = Float64[], Float64[]
+        for run in 1:n_runs
+            Random.seed!(run * 1000)
+            t = @elapsed begin
+                x, _, _, _ = grasp_complet(C, A, alpha=grasp_alpha, n_iter=grasp_iter, verbose=false)
+                z = dot(C, x)
+            end
+            push!(z_grasp, z); push!(t_grasp, t)
+        end
+
+        # ---- ACO ----
+        z_aco, t_aco = Float64[], Float64[]
+        for run in 1:n_runs
+            Random.seed!(run * 1000)
+            t = @elapsed begin
+                _, best_val = ACO_SPP(C, A, conf;
+                                       maxIter=aco_maxIter, maxAnt=aco_maxAnt, rhoE=aco_rhoE,
+                                       phiInit=1.0, iterOnExploit=0.75, iterStagnant=8,
+                                       do_local_search=true, verbose=false)
+            end
+            push!(z_aco, best_val); push!(t_aco, t)
+        end
+
+        # ---- Algorithme Génétique ----
+        z_ag, t_ag = Float64[], Float64[]
+        for run in 1:n_runs
+            Random.seed!(run * 1000)
+            t = @elapsed begin
+                _, fit = algorithme_genetique_simple(C, A;
+                                                       taille_pop=ag_pop, generations=ag_gen,
+                                                       prob_croisement=ag_croisement,
+                                                       prob_mutation=ag_mutation,
+                                                       freq_recherche_locale=50, verbose=false)
+            end
+            push!(z_ag, fit); push!(t_ag, t)
+        end
+
+        println(@sprintf("  GRASP  : Z_moy=%.1f (σ=%.1f) | T_moy=%.2fs", mean(z_grasp), std(z_grasp), mean(t_grasp)))
+        println(@sprintf("  ACO    : Z_moy=%.1f (σ=%.1f) | T_moy=%.2fs", mean(z_aco), std(z_aco), mean(t_aco)))
+        println(@sprintf("  AG     : Z_moy=%.1f (σ=%.1f) | T_moy=%.2fs", mean(z_ag), std(z_ag), mean(t_ag)))
+
+        push!(resultats, (
+            instance=basename(inst), m=m, n=n,
+            grasp_zmoy=mean(z_grasp), grasp_std=std(z_grasp), grasp_tmoy=mean(t_grasp),
+            aco_zmoy=mean(z_aco), aco_std=std(z_aco), aco_tmoy=mean(t_aco),
+            ag_zmoy=mean(z_ag), ag_std=std(z_ag), ag_tmoy=mean(t_ag)
+        ))
+    end
+
+    # ---- Courbes de convergence sur une instance représentative ----
+    println("\n>>> Courbes de convergence sur $(basename(instance_convergence))...")
+    Cc, Ac = loadSPP(instance_convergence)
+    confc = precompute_conflicts(Ac)
+
+    Random.seed!(1)
+    _, _, _, hist_grasp = grasp_complet(Cc, Ac, alpha=grasp_alpha, n_iter=grasp_iter, verbose=false)
+
+    Random.seed!(1)
+    hist_aco = Float64[]
+    ACO_SPP(Cc, Ac, confc; maxIter=aco_maxIter, maxAnt=aco_maxAnt, rhoE=aco_rhoE,
+            phiInit=1.0, iterOnExploit=0.75, iterStagnant=8,
+            do_local_search=true, verbose=false, history=hist_aco)
+
+    Random.seed!(1)
+    hist_ag = Float64[]
+    algorithme_genetique_simple(Cc, Ac; taille_pop=ag_pop, generations=ag_gen,
+                                 prob_croisement=ag_croisement, prob_mutation=ag_mutation,
+                                 freq_recherche_locale=50, verbose=false, history=hist_ag)
+
+    afficher_resultats_EI3(resultats)
+    generer_latex_EI3(resultats, n_runs)
+    generer_graphiques_EI3(resultats, hist_grasp, hist_aco, hist_ag, basename(instance_convergence))
+
+    println("\n" * "="^80)
+    println("  EXPÉRIMENTATION EI3 TERMINÉE")
+    println("  Fichiers générés dans res/")
+    println("="^80)
+
+    return resultats
+end
+
+
+function afficher_resultats_EI3(r)
+    println("\n" * "="^120)
+    println("TABLEAU RÉCAPITULATIF EI3")
+    println("="^120)
+    @printf "%-20s | %8s %6s %8s | %8s %6s %8s | %8s %6s %8s\n" "Instance" "G_moy" "G_σ" "G_T(s)" "A_moy" "A_σ" "A_T(s)" "AG_moy" "AG_σ" "AG_T(s)"
+    println("-"^120)
+    for x in r
+        @printf "%-20s | %8.1f %6.1f %8.2f | %8.1f %6.1f %8.2f | %8.1f %6.1f %8.2f\n" x.instance x.grasp_zmoy x.grasp_std x.grasp_tmoy x.aco_zmoy x.aco_std x.aco_tmoy x.ag_zmoy x.ag_std x.ag_tmoy
+    end
+    println("="^120)
+
+    victoires = Dict("GRASP" => 0, "ACO" => 0, "AG" => 0)
+    for x in r
+        best = argmax([x.grasp_zmoy, x.aco_zmoy, x.ag_zmoy])
+        victoires[["GRASP", "ACO", "AG"][best]] += 1
+    end
+    println("\nVictoires (Z moyen max) : GRASP=$(victoires["GRASP"]) | ACO=$(victoires["ACO"]) | AG=$(victoires["AG"])")
+    println("Temps moyen global      : GRASP=$(round(mean([x.grasp_tmoy for x in r]), digits=2))s | ",
+            "ACO=$(round(mean([x.aco_tmoy for x in r]), digits=2))s | ",
+            "AG=$(round(mean([x.ag_tmoy for x in r]), digits=2))s")
+end
+
+
+function generer_latex_EI3(r, n_runs)
+    mkpath("res")
+    open("res/tableau_EI3.tex", "w") do f
+        write(f, "\\begin{table}[htbp]\n\\centering\n")
+        write(f, "\\caption{Résultats EI3 : GRASP vs ACO vs AG ($n_runs runs)}\n")
+        write(f, "\\label{tab:ei3}\n\\small\n")
+        write(f, "\\begin{tabular}{|l|rr|rrr|rrr|rrr|}\n\\hline\n")
+        write(f, "\\textbf{Instance} & \\textbf{m} & \\textbf{n} & \\multicolumn{3}{c|}{\\textbf{GRASP}} & \\multicolumn{3}{c|}{\\textbf{ACO}} & \\multicolumn{3}{c|}{\\textbf{AG}} \\\\\n")
+        write(f, "& & & Z_{moy} & \\sigma & T(s) & Z_{moy} & \\sigma & T(s) & Z_{moy} & \\sigma & T(s) \\\\\n\\hline\n")
+
+        for x in r
+            inst = replace(x.instance, "_" => "\\_")
+            write(f, "$inst & $(x.m) & $(x.n) & ")
+            write(f, "$(round(x.grasp_zmoy, digits=1)) & $(round(x.grasp_std, digits=1)) & $(round(x.grasp_tmoy, digits=2)) & ")
+            write(f, "$(round(x.aco_zmoy, digits=1)) & $(round(x.aco_std, digits=1)) & $(round(x.aco_tmoy, digits=2)) & ")
+            write(f, "$(round(x.ag_zmoy, digits=1)) & $(round(x.ag_std, digits=1)) & $(round(x.ag_tmoy, digits=2)) \\\\\n")
+        end
+
+        write(f, "\\hline\n\\end{tabular}\n\\end{table}\n")
+    end
+    println("✓ res/tableau_EI3.tex généré")
+end
+
+
+function generer_graphiques_EI3(r, hist_grasp, hist_aco, hist_ag, nom_instance_convergence)
+    mkpath("res")
+    instances = [x.instance for x in r]
+    indices = 1:length(instances)
+
+    # Graphique 1 : Comparaison qualité moyenne
+    p1 = plot(indices, [x.grasp_zmoy for x in r],
+              label="GRASP", linewidth=3, color=:red, marker=:circle, markersize=6,
+              title="Comparaison qualité moyenne", xlabel="Instances", ylabel="Z moyen",
+              xticks=(indices, instances), xrotation=45,
+              legend=:topleft, size=(900, 500), bottom_margin=10Plots.mm)
+    plot!(p1, indices, [x.aco_zmoy for x in r], label="ACO", linewidth=3, color=:blue, marker=:square, markersize=6)
+    plot!(p1, indices, [x.ag_zmoy for x in r], label="AG", linewidth=3, color=:green, marker=:diamond, markersize=6)
+
+    # Graphique 2 : Comparaison des temps d'exécution
+    p2 = plot(indices, [x.grasp_tmoy for x in r],
+              label="GRASP", linewidth=3, color=:red, marker=:circle, markersize=6,
+              title="Comparaison temps d'exécution", xlabel="Instances", ylabel="Temps (s)",
+              xticks=(indices, instances), xrotation=45,
+              legend=:topleft, size=(900, 500), bottom_margin=10Plots.mm)
+    plot!(p2, indices, [x.aco_tmoy for x in r], label="ACO", linewidth=3, color=:blue, marker=:square, markersize=6)
+    plot!(p2, indices, [x.ag_tmoy for x in r], label="AG", linewidth=3, color=:green, marker=:diamond, markersize=6)
+
+    # Graphique 3 : Robustesse (écart-type)
+    p3 = plot(indices, [x.grasp_std for x in r],
+              label="GRASP", linewidth=3, color=:red, marker=:circle, markersize=6,
+              title="Robustesse (écart-type)", xlabel="Instances", ylabel="Écart-type",
+              xticks=(indices, instances), xrotation=45,
+              legend=:topleft, size=(900, 500), bottom_margin=10Plots.mm)
+    plot!(p3, indices, [x.aco_std for x in r], label="ACO", linewidth=3, color=:blue, marker=:square, markersize=6)
+    plot!(p3, indices, [x.ag_std for x in r], label="AG", linewidth=3, color=:green, marker=:diamond, markersize=6)
+
+    # Graphique 4 : Efficacité (Z moyen / temps), échelle log
+    eff_grasp = [x.grasp_zmoy / max(x.grasp_tmoy, 1e-6) for x in r]
+    eff_aco = [x.aco_zmoy / max(x.aco_tmoy, 1e-6) for x in r]
+    eff_ag = [x.ag_zmoy / max(x.ag_tmoy, 1e-6) for x in r]
+    p4 = plot(indices, eff_grasp,
+              label="GRASP", linewidth=3, color=:red, marker=:circle, markersize=6,
+              title="Efficacité (Z moyen / temps)", xlabel="Instances", ylabel="Z / temps (s)",
+              xticks=(indices, instances), xrotation=45, yscale=:log10,
+              legend=:topright, size=(900, 500), bottom_margin=10Plots.mm)
+    plot!(p4, indices, eff_aco, label="ACO", linewidth=3, color=:blue, marker=:square, markersize=6)
+    plot!(p4, indices, eff_ag, label="AG", linewidth=3, color=:green, marker=:diamond, markersize=6)
+
+    # Graphique 5 : Courbes de convergence sur une instance représentative
+    p5 = plot(1:length(hist_grasp), hist_grasp,
+              label="GRASP ($(length(hist_grasp)) iter)", linewidth=2, color=:red,
+              title="Convergence sur $nom_instance_convergence", xlabel="Itérations", ylabel="Z best",
+              legend=:bottomright, size=(900, 500))
+    plot!(p5, 1:length(hist_aco), hist_aco, label="ACO ($(length(hist_aco)) iter)", linewidth=2, color=:blue)
+    plot!(p5, 1:length(hist_ag), hist_ag, label="AG ($(length(hist_ag)) gén)", linewidth=2, color=:green)
+
+    plot(p1, p2, p3, p4, layout=(2,2), size=(1800, 1200))
+    savefig("res/graphiques_EI3_synthese.pdf")
+
+    plot(p5, size=(1000, 600))
+    savefig("res/graphiques_EI3_convergence.pdf")
+
+    println("✓ res/graphiques_EI3_synthese.pdf généré")
+    println("✓ res/graphiques_EI3_convergence.pdf généré")
+end
+
+
+# ==============================================================================
 # MESSAGES D'ACCUEIL
 # ==============================================================================
 
@@ -527,4 +765,6 @@ println("\n--- EI1 : Glouton + Recherche Locale ---")
 println("  experimentationSPP()")
 println("\n--- EI2 : GRASP vs Reactive GRASP ---")
 println("  experimentationSPP_EI2()  # Par défaut: 5 runs, 100 itérations")
+println("\n--- EI3 : GRASP vs ACO vs Algorithme Génétique ---")
+println("  experimentationSPP_EI3()  # Par défaut: 5 runs")
 println("\n" * "="^80)

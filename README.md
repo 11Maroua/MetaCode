@@ -71,12 +71,12 @@ MetaCode/
 │   ├── setSPP.jl         # modèle JuMP exact du SPP
 │   ├── getfname.jl       # utilitaire de listing de fichiers
 │   ├── main.jl           # démo minimale : chargement + résolution exacte
-│   ├── Glouton.jl        # EI1 : construction gloutonne + peut_ajouter
+│   ├── Glouton.jl        # EI1 : construction gloutonne + peut_ajouter + utilite_variable
 │   ├── Exploration.jl    # EI1 : recherche locale (1-1, 2-1)
 │   ├── Grasp.jl          # EI2 : GRASP + Reactive GRASP
 │   ├── AG.jl             # EI3 : algorithme génétique
 │   ├── ACO.jl            # EI3 : colonies de fourmis
-│   └── experiments.jl    # scripts d'expérimentation complets (EI1 + EI2), génère res/
+│   └── experiments.jl    # scripts d'expérimentation complets (EI1 + EI2 + EI3), génère res/
 ├── dat/                  # 10 instances SPP
 ├── res/                  # tableaux LaTeX et graphiques générés par experiments.jl
 │   └── img/               # versions PNG des graphiques (pour ce README)
@@ -104,6 +104,9 @@ experimentationSPP()
 
 # EI2 : GRASP vs Reactive GRASP (5 runs par instance)
 experimentationSPP_EI2(n_runs=5)
+
+# EI3 : GRASP vs ACO vs Algorithme Génétique (5 runs par instance)
+experimentationSPP_EI3(n_runs=5)
 ```
 
 Pour lancer un algorithme isolément :
@@ -205,7 +208,7 @@ Le Reactive GRASP égale ou dépasse le GRASP standard sur la majorité des inst
 - **GRASP** reste un compromis solide : qualité en 2e position, temps raisonnables, simple à implémenter et à paramétrer.
 - **L'AG** est le plus robuste d'exécution en exécution (écart-type le plus faible, plusieurs instances à variance nulle) et reste compétitif sur les petites instances, mais son temps de calcul explose sur les grandes instances : 92.2 s sur `pb_1000rnd0100.dat` contre 0.41 s pour ACO (×224), et 395.8 s sur `pb_2000rnd0100.dat` contre 1.37 s pour ACO (×289). La population de 80 individus sur 2000 bits, combinée à la réparation systématique après chaque croisement/mutation, en est la cause principale.
 
-> Note d'implémentation : `ACO.jl` (`experimentation_ACO`) et `AG.jl` (`tester_AG`) permettent de relancer ces algorithmes séparément, mais le script unifié `experimentationSPP_EI3()` qui a produit ce tableau et les 5 graphiques comparatifs du rapport n'est pas (encore) présent dans `src/experiments.jl`. À reconstituer si tu veux pouvoir régénérer ces résultats depuis le repo.
+> Note d'implémentation : `experimentationSPP_EI3()` (dans `src/experiments.jl`) reconstitue cette campagne : elle relance GRASP, ACO et l'AG (5 runs chacun) sur les 10 instances, régénère `res/tableau_EI3.tex` ainsi que `res/graphiques_EI3_synthese.pdf` (qualité, temps, robustesse, efficacité) et `res/graphiques_EI3_convergence.pdf` (courbes de convergence sur `pb_200rnd0300.dat`). Compte tenu des temps d'exécution de l'AG sur les grandes instances (plusieurs minutes chacun), l'exécution complète prend un certain temps, à lancer avec une bonne tasse de café.
 
 ## Auteurs
 

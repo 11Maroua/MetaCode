@@ -161,20 +161,24 @@ function algorithme_genetique_simple(C::Vector{Int}, A::Matrix{Int};
                                      generations=300,
                                      prob_croisement=0.85,
                                      prob_mutation=0.02,
-                                     freq_recherche_locale=50)
+                                     freq_recherche_locale=50,
+                                     verbose::Bool=true,
+                                     history::Union{Nothing,Vector{Float64}} = nothing)
 
     n = length(C)
 
-    println("================= ALGORITHME GÉNÉTIQUE SIMPLE ===============")
-    println("Variables: $n, Contraintes: $(size(A,1))")
-    println("Population: $taille_pop, Générations: $generations")
-    println()
+    if verbose
+        println("================= ALGORITHME GÉNÉTIQUE SIMPLE ===============")
+        println("Variables: $n, Contraintes: $(size(A,1))")
+        println("Population: $taille_pop, Générations: $generations")
+        println()
+    end
 
     population = Vector{Vector{Int}}()
     fitness_pop = Vector{Float64}()
 
     # Ajouter solution gloutonne
-    sol_glouton = construction_gloutonne(C, A)
+    sol_glouton = construction_gloutonne(C, A, verbose=false)
     push!(population, sol_glouton)
     push!(fitness_pop, evaluer_fitness(sol_glouton, C, A))
 
@@ -187,8 +191,9 @@ function algorithme_genetique_simple(C::Vector{Int}, A::Matrix{Int};
 
     meilleure_sol = copy(population[argmax(fitness_pop)])
     meilleure_fitness = maximum(fitness_pop)
+    history !== nothing && push!(history, meilleure_fitness)
 
-    println("Fitness initiale: $meilleure_fitness")
+    verbose && println("Fitness initiale: $meilleure_fitness")
 
     for gen in 1:generations
         nouvelle_population = Vector{Vector{Int}}()
@@ -240,18 +245,22 @@ function algorithme_genetique_simple(C::Vector{Int}, A::Matrix{Int};
             ancienne = meilleure_fitness
             meilleure_sol = copy(population[best_idx])
             meilleure_fitness = fitness_pop[best_idx]
-            println("Generation $gen: AMÉLIORATION = $meilleure_fitness (+$(meilleure_fitness - ancienne))")
+            verbose && println("Generation $gen: AMÉLIORATION = $meilleure_fitness (+$(meilleure_fitness - ancienne))")
         end
 
-        if gen % 50 == 0
+        if verbose && gen % 50 == 0
             println("Gen $gen: Meilleure fitness = $meilleure_fitness")
         end
+
+        history !== nothing && push!(history, meilleure_fitness)
     end
 
-    println("\n============= RÉSULTAT FINAL =============")
-    println("Fitness: $meilleure_fitness")
-    println("Variables sélectionnées: $(sum(meilleure_sol))")
-    println("Solution réalisable: $(est_realisable(meilleure_sol, A))")
+    if verbose
+        println("\n============= RÉSULTAT FINAL =============")
+        println("Fitness: $meilleure_fitness")
+        println("Variables sélectionnées: $(sum(meilleure_sol))")
+        println("Solution réalisable: $(est_realisable(meilleure_sol, A))")
+    end
 
     return meilleure_sol, meilleure_fitness
 end

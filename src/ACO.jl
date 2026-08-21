@@ -223,7 +223,8 @@ function ACO_SPP(C, A, conf;
                  iterOnExploit::Float64 = 0.75,
                  iterStagnant::Int = 8,
                  do_local_search::Bool = true,
-                 verbose::Bool = true)
+                 verbose::Bool = true,
+                 history::Union{Nothing,Vector{Float64}} = nothing)
 
     n = length(C)
     pher = fill(Float64(phiInit), n)
@@ -330,6 +331,9 @@ function ACO_SPP(C, A, conf;
             verbose && println("  Phéromones avant : min=$pher_before_min, max=$pher_before_max")
             verbose && println("  Phéromones après : min=$(minimum(pher)), max=$(maximum(pher))")
         end
+
+        # Suivi d'historique (utilisé pour les courbes de convergence, ex. EI3)
+        history !== nothing && push!(history, best_global_val)
     end
 
     verbose && println("\n====================== FIN ACO ======================")

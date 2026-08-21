@@ -71,6 +71,18 @@ sans violer de contrainte (i.e. sans entrer en conflit avec une variable
 déjà sélectionnée). Fonction partagée par tous les algorithmes du projet
 (glouton, recherche locale, GRASP).
 """
+"""
+    utilite_variable(C, A, j)
+
+Ratio d'utilité de la variable `j` : c_j / (nombre de contraintes qu'elle occupe).
+Même métrique que dans la construction gloutonne, réutilisée comme heuristique
+locale (`eta`) par l'ACO.
+"""
+function utilite_variable(C, A, j)
+    nb_contraintes = sum(@view A[:, j])
+    return nb_contraintes > 0 ? C[j] / nb_contraintes : Float64(C[j])
+end
+
 function peut_ajouter(x, A, j_new)
     for i in 1:size(A, 1)
         if A[i, j_new] == 1
